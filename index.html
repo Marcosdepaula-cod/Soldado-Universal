@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>No Ponto — dieta, água e treino</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%2212%22 r=%2210%22 fill=%22%23E2A93B%22/></svg>" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
+  html, body { margin: 0; padding: 0; background: #1B1815; }
+  * { box-sizing: border-box; }
+</style>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/plain" id="app-source">
+const { useState, useEffect, useCallback, useMemo } = React;
+
+/* ============================== ÍCONES (SVG próprios, sem dependência externa) ============================== */
+function Icon({ children, size = 20, style }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      {children}
+    </svg>
+  );
+}
+const Home = (p) => <Icon {...p}><path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" /></Icon>;
+const UtensilsCrossed = (p) => <Icon {...p}><path d="M6 3v6a2 2 0 0 0 4 0V3" /><path d="M8 9v12" /><path d="M17 3c-1.2 1.2-2 3-2 5s1.6 4 2 4c.4 0 2-2 2-4s-.8-3.8-2-5Z" /><path d="M17 12v9" /></Icon>;
+const Package = (p) => <Icon {...p}><path d="M3 8l9-5 9 5-9 5-9-5Z" /><path d="M3 8v9l9 5 9-5V8" /><path d="M12 13v9" /></Icon>;
+const TrendingUp = (p) => <Icon {...p}><polyline points="3,17 9,10 13,14 21,5" /><polyline points="14,5 21,5 21,12" /></Icon>;
+const Droplet = (p) => <Icon {...p}><path d="M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11Z" /></Icon>;
+const Dumbbell = (p) => <Icon {...p}><path d="M4 9v6M2 10.5v3M20 9v6M22 10.5v3" /><path d="M7 12h10" /><path d="M7 8v8M17 8v8" /></Icon>;
+const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.5" y2="16.5" /></Icon>;
+const X = (p) => <Icon {...p}><line x1="5" y1="5" x2="19" y2="19" /><line x1="19" y1="5" x2="5" y2="19" /></Icon>;
+const Plus = (p) => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></Icon>;
+const Flame = (p) => <Icon {...p}><path d="M12 3c1 3-3 4-3 8a3 3 0 0 0 6 0c0-1-1-2-1-3 1.5 1 2 3 2 5a4 4 0 0 1-8 0c0-4 3-6 4-10Z" /></Icon>;
+const AlertTriangle = (p) => <Icon {...p}><path d="M12 4 2 20h20L12 4Z" /><line x1="12" y1="10" x2="12" y2="15" /><line x1="12" y1="17.5" x2="12" y2="17.51" /></Icon>;
+const ChevronDown = (p) => <Icon {...p}><polyline points="6,9 12,15 18,9" /></Icon>;
+
+/* ============================== PALETTE ============================== */
+const PALETTE = {
+  bg: '#1B1815',
+  surface: '#242019',
+  surfaceAlt: '#2C261E',
+  border: '#3A3226',
+  track: '#332C22',
+  text: '#F3EDE2',
+  textMuted: '#A79A88',
+  honey: '#E2A93B',
+  honeyDark: '#B9852A',
+  sage: '#8CA06B',
+  paprika: '#C2542E',
+  teal: '#5E9A93',
+};
+
+const FONT_MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', monospace";
+const FONT_SANS = "'Manrope', system-ui, -apple-system, sans-serif";
+
+/* ============================== DIET DATA ============================== */
+const DIET = {
+  cafe: [
+    { id: 'b1s', name: 'Vitamina de banana com aveia (sem whey)', kcal: 330, prot: 10, prep: 'Bater no liquidificador: 1 banana (100g), 40g de aveia, 200ml de leite e canela a gosto.' },
+    { id: 'b1c', name: 'Vitamina de banana com aveia (com whey)', kcal: 450, prot: 34, prep: 'Bater no liquidificador: 1 banana (100g), 40g de aveia, 200ml de leite, canela a gosto e 1 scoop de whey (30g).' },
+    { id: 'b2', name: 'Ovos mexidos com pão e queijo', kcal: 475, prot: 28, prep: 'Mexer 2 ovos na frigideira pequena. Servir com 3 fatias de pão integral, 1 fatia de queijo minas (30g) e uma fruta.' },
+    { id: 'b3', name: 'Iogurte com granola e fruta', kcal: 320, prot: 11, prep: 'Misturar 200g de iogurte natural com 30g de granola e uma fruta picada.' },
+    { id: 'b4', name: 'Tapioca com frango desfiado', kcal: 370, prot: 22, prep: 'Fritar a goma de tapioca (40g) na frigideira pequena até dourar dos dois lados. Rechear com 60g de frango desfiado. Servir com uma fruta.' },
+  ],
+  almoco_janta: [
+    { id: 'm1', name: 'M1 · Frango mel-mostarda, arroz, feijão, pimentão', kcal: 690, prot: 72, prep: 'Temperar 200g de peito de frango com mostarda, mel, páprica doce e páprica defumada. Grelhar na frigideira grande. Servir com 150g de arroz branco (panela elétrica), 100g de feijão cozido e 100g de pimentão refogado com um fio de azeite.' },
+    { id: 'm2', name: 'M2 · Carne moída, arroz, berinjela', kcal: 610, prot: 57, prep: 'Refogar 200g de carne moída magra na frigideira grande. Servir com 150g de arroz branco (panela elétrica) e 100g de berinjela refogada com azeite.' },
+    { id: 'm3', name: 'M3 · Frango desfiado mel-mostarda, batata inglesa, chuchu', kcal: 515, prot: 61, prep: 'Temperar o frango desfiado (180g) com mostarda, mel e páprica. Cozinhar. Servir com 220g de batata inglesa cozida e 100g de chuchu refogado com azeite.' },
+    { id: 'm4', name: 'M4 · Tilápia, arroz, abobrinha', kcal: 515, prot: 57, prep: 'Grelhar 200g de tilápia na frigideira grande. Servir com 150g de arroz branco (panela elétrica) e 100g de abobrinha refogada com azeite.' },
+  ],
+  lanche: [
+    { id: 's1', name: 'Iogurte + fruta', kcal: 180, prot: 10, prep: 'Misturar 200g de iogurte natural com uma fruta picada.' },
+    { id: 's2', name: 'Queijo cottage ou peito de peru + fruta', kcal: 180, prot: 13, prep: 'Servir 100g de queijo cottage (ou 2 fatias de peito de peru) com uma fruta. Sem preparo, só embalar.' },
+    { id: 's3', name: 'Sanduíche natural', kcal: 280, prot: 22, prep: 'Montar sanduíche com pão integral, frango desfiado e folhas verdes.' },
+    { id: 's4', name: 'Whey + fruta', kcal: 190, prot: 25, prep: 'Bater ou misturar 1 scoop de whey (30g) com água. Servir com uma fruta.' },
+    { id: 's5', name: 'Castanhas + fruta', kcal: 200, prot: 5, prep: 'Servir 20g de mix de castanhas com uma fruta.' },
+  ],
+  doce: [
+    { id: 't1', name: 'Pasta de leite ninho + uva/morango', kcal: 160, prot: 0, prep: 'Bater 20g de leite em pó com água e adoçante a gosto até virar uma pasta. Servir com 100g de uva ou morango.' },
+    { id: 't2', name: 'Doce de leite ou condensado + fruta', kcal: 140, prot: 0, prep: 'Servir 1 colher de sopa de doce de leite ou leite condensado com uma fruta.' },
+    { id: 't3', name: 'Chocolate 70% cacau', kcal: 115, prot: 0, prep: 'Servir 3-4 quadradinhos (20g) de chocolate 70% cacau.' },
+  ],
+};
+
+const MEAL_TYPES = [
+  { id: 'cafe', label: 'Café' },
+  { id: 'almoco', label: 'Almoço' },
+  { id: 'lanche', label: 'Lanche' },
+  { id: 'janta', label: 'Janta' },
+  { id: 'doce', label: 'Doce' },
+  { id: 'bebida', label: 'Bebida' },
+];
+
+const PRESET_MAP = { cafe: 'cafe', almoco: 'almoco_janta', janta: 'almoco_janta', lanche: 'lanche', doce: 'doce', bebida: null };
+
+/* ============================== FOOD SEARCH DATABASE ============================== */
+const FOODS = [
+  { id: 'frango_grelhado', name: 'Peito de frango grelhado', kcal100: 165, prot100: 31, unit: 'g', portion: 150 },
+  { id: 'frango_desfiado', name: 'Frango desfiado', kcal100: 165, prot100: 31, unit: 'g', portion: 150 },
+  { id: 'carne_moida', name: 'Carne moída (patinho)', kcal100: 172, prot100: 26, unit: 'g', portion: 150 },
+  { id: 'tilapia', name: 'Tilápia grelhada', kcal100: 128, prot100: 26, unit: 'g', portion: 150 },
+  { id: 'sobrecoxa', name: 'Coxa/sobrecoxa sem pele', kcal100: 180, prot100: 26, unit: 'g', portion: 150 },
+  { id: 'alcatra', name: 'Alcatra grelhada', kcal100: 180, prot100: 30, unit: 'g', portion: 150 },
+  { id: 'merluza', name: 'Merluza/pescada', kcal100: 100, prot100: 19, unit: 'g', portion: 150 },
+  { id: 'arroz_branco', name: 'Arroz branco cozido', kcal100: 130, prot100: 2.7, unit: 'g', portion: 150 },
+  { id: 'feijao', name: 'Feijão cozido', kcal100: 76, prot100: 4.8, unit: 'g', portion: 100 },
+  { id: 'batata_inglesa', name: 'Batata inglesa cozida', kcal100: 60, prot100: 1.8, unit: 'g', portion: 200 },
+  { id: 'pimentao', name: 'Pimentão refogado', kcal100: 25, prot100: 1, unit: 'g', portion: 100 },
+  { id: 'berinjela', name: 'Berinjela refogada', kcal100: 28, prot100: 1, unit: 'g', portion: 100 },
+  { id: 'chuchu', name: 'Chuchu refogado', kcal100: 22, prot100: 0.6, unit: 'g', portion: 100 },
+  { id: 'abobrinha', name: 'Abobrinha refogada', kcal100: 20, prot100: 1.2, unit: 'g', portion: 100 },
+  { id: 'ovo', name: 'Ovo (mexido/cozido)', kcal100: 155, prot100: 13, unit: 'g', portion: 50 },
+  { id: 'pao_integral', name: 'Pão integral (fatia)', kcal100: 253, prot100: 12, unit: 'g', portion: 25 },
+  { id: 'queijo_minas', name: 'Queijo minas frescal', kcal100: 240, prot100: 19, unit: 'g', portion: 30 },
+  { id: 'queijo_cottage', name: 'Queijo cottage', kcal100: 98, prot100: 11, unit: 'g', portion: 100 },
+  { id: 'peito_peru', name: 'Peito de peru fatiado', kcal100: 110, prot100: 20, unit: 'g', portion: 50 },
+  { id: 'iogurte', name: 'Iogurte natural', kcal100: 55, prot100: 4, unit: 'g', portion: 200 },
+  { id: 'aveia', name: 'Aveia em flocos', kcal100: 375, prot100: 13, unit: 'g', portion: 40 },
+  { id: 'granola', name: 'Granola', kcal100: 400, prot100: 8, unit: 'g', portion: 30 },
+  { id: 'tapioca_goma', name: 'Goma de tapioca', kcal100: 345, prot100: 0, unit: 'g', portion: 40 },
+  { id: 'castanhas', name: 'Mix de castanhas', kcal100: 600, prot100: 15, unit: 'g', portion: 20 },
+  { id: 'banana', name: 'Banana', kcal100: 89, prot100: 1.1, unit: 'g', portion: 100 },
+  { id: 'uva', name: 'Uva', kcal100: 69, prot100: 0.7, unit: 'g', portion: 100 },
+  { id: 'morango', name: 'Morango', kcal100: 32, prot100: 0.7, unit: 'g', portion: 100 },
+  { id: 'melancia', name: 'Melancia', kcal100: 30, prot100: 0.6, unit: 'g', portion: 150 },
+  { id: 'mamao', name: 'Mamão', kcal100: 40, prot100: 0.5, unit: 'g', portion: 150 },
+  { id: 'maca', name: 'Maçã', kcal100: 52, prot100: 0.3, unit: 'g', portion: 130 },
+  { id: 'abacaxi', name: 'Abacaxi', kcal100: 50, prot100: 0.5, unit: 'g', portion: 100 },
+  { id: 'leite', name: 'Leite', kcal100: 61, prot100: 3.2, unit: 'ml', portion: 200 },
+  { id: 'azeite', name: 'Azeite', kcal100: 884, prot100: 0, unit: 'g', portion: 5 },
+  { id: 'mel', name: 'Mel', kcal100: 304, prot100: 0.3, unit: 'g', portion: 7 },
+  { id: 'doce_leite', name: 'Doce de leite', kcal100: 315, prot100: 3, unit: 'g', portion: 20 },
+  { id: 'leite_condensado', name: 'Leite condensado', kcal100: 321, prot100: 7.5, unit: 'g', portion: 20 },
+  { id: 'chocolate70', name: 'Chocolate 70% cacau', kcal100: 545, prot100: 7, unit: 'g', portion: 20 },
+  { id: 'leite_po', name: 'Leite em pó', kcal100: 496, prot100: 26, unit: 'g', portion: 20 },
+  { id: 'whey', name: 'Whey protein', kcal100: 400, prot100: 80, unit: 'g', portion: 30 },
+  { id: 'refri_zero', name: 'Refrigerante zero (lata)', kcal100: 1, prot100: 0, unit: 'ml', portion: 350 },
+  { id: 'refri_normal', name: 'Refrigerante comum', kcal100: 42, prot100: 0, unit: 'ml', portion: 350 },
+  { id: 'suco_pronto', name: 'Suco pronto (integral, caixinha)', kcal100: 45, prot100: 0.3, unit: 'ml', portion: 200 },
+  { id: 'limonada', name: 'Limonada caseira (sem açúcar)', kcal100: 12, prot100: 0.1, unit: 'ml', portion: 300 },
+  { id: 'suco_abacaxi_hortela', name: 'Suco de abacaxi c/ hortelã (caseiro)', kcal100: 20, prot100: 0.2, unit: 'ml', portion: 300 },
+  { id: 'suco_melancia_caseiro', name: 'Suco de melancia (caseiro)', kcal100: 18, prot100: 0.2, unit: 'ml', portion: 300 },
+];
+
+const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+const WORKOUT_TYPES = ['Musculação', 'Cardio', 'Funcional', 'Outro'];
+
+/* ============================== PANTRY (DESPENSA) ============================== */
+const PANTRY_CATEGORIES = ['Açougue e Peixaria', 'Hortifruti', 'Padaria', 'Frios e Laticínios', 'Mercearia', 'Doces'];
+
+const PANTRY_ITEMS = [
+  { id: 'frango_grelhado', name: 'Peito de frango', cat: 'Açougue e Peixaria', unit: 'g', gramsPerUnit: 1, threshold: 150 },
+  { id: 'frango_desfiado', name: 'Frango pra desfiar', cat: 'Açougue e Peixaria', unit: 'g', gramsPerUnit: 1, threshold: 150 },
+  { id: 'carne_moida', name: 'Carne moída (patinho)', cat: 'Açougue e Peixaria', unit: 'g', gramsPerUnit: 1, threshold: 150 },
+  { id: 'tilapia', name: 'Tilápia', cat: 'Açougue e Peixaria', unit: 'g', gramsPerUnit: 1, threshold: 150 },
+  { id: 'batata_inglesa', name: 'Batata inglesa', cat: 'Hortifruti', unit: 'kg', gramsPerUnit: 1000, threshold: 300 },
+  { id: 'pimentao', name: 'Pimentão', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 150, threshold: 150 },
+  { id: 'berinjela', name: 'Berinjela', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 250, threshold: 250 },
+  { id: 'chuchu', name: 'Chuchu', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 300, threshold: 300 },
+  { id: 'abobrinha', name: 'Abobrinha', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 200, threshold: 200 },
+  { id: 'banana', name: 'Banana', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 120, threshold: 240 },
+  { id: 'uva', name: 'Uva', cat: 'Hortifruti', unit: 'g', gramsPerUnit: 1, threshold: 150 },
+  { id: 'morango', name: 'Morango', cat: 'Hortifruti', unit: 'g', gramsPerUnit: 1, threshold: 150 },
+  { id: 'maca', name: 'Maçã', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 130, threshold: 130 },
+  { id: 'mamao', name: 'Mamão', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 600, threshold: 150 },
+  { id: 'melancia', name: 'Melancia', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 2500, threshold: 200 },
+  { id: 'pao_integral', name: 'Pão integral', cat: 'Padaria', unit: 'pacote', gramsPerUnit: 400, threshold: 75, isPackage: true },
+  { id: 'ovo', name: 'Ovos', cat: 'Frios e Laticínios', unit: 'un', gramsPerUnit: 50, threshold: 100 },
+  { id: 'leite', name: 'Leite', cat: 'Frios e Laticínios', unit: 'L', gramsPerUnit: 1000, threshold: 200 },
+  { id: 'iogurte', name: 'Iogurte natural', cat: 'Frios e Laticínios', unit: 'un', gramsPerUnit: 170, threshold: 170 },
+  { id: 'queijo_minas', name: 'Queijo minas frescal', cat: 'Frios e Laticínios', unit: 'g', gramsPerUnit: 1, threshold: 60 },
+  { id: 'queijo_cottage', name: 'Queijo cottage', cat: 'Frios e Laticínios', unit: 'g', gramsPerUnit: 1, threshold: 100 },
+  { id: 'peito_peru', name: 'Peito de peru fatiado', cat: 'Frios e Laticínios', unit: 'g', gramsPerUnit: 1, threshold: 50 },
+  { id: 'arroz_branco', name: 'Arroz branco', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 1000, yieldFactor: 2.5, threshold: 200, isPackage: true },
+  { id: 'feijao', name: 'Feijão (grão seco)', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 1000, yieldFactor: 2.2, threshold: 150, isPackage: true },
+  { id: 'aveia', name: 'Aveia em flocos', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 500, threshold: 80, isPackage: true },
+  { id: 'granola', name: 'Granola', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 500, threshold: 60, isPackage: true },
+  { id: 'tapioca_goma', name: 'Goma de tapioca', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 500, threshold: 80, isPackage: true },
+  { id: 'castanhas', name: 'Mix de castanhas', cat: 'Mercearia', unit: 'g', gramsPerUnit: 1, threshold: 40 },
+  { id: 'azeite', name: 'Azeite', cat: 'Mercearia', unit: 'un', gramsPerUnit: 500, threshold: 50 },
+  { id: 'mel', name: 'Mel', cat: 'Mercearia', unit: 'un', gramsPerUnit: 280, threshold: 30 },
+  { id: 'leite_po', name: 'Leite em pó', cat: 'Mercearia', unit: 'un', gramsPerUnit: 400, threshold: 40 },
+  { id: 'whey', name: 'Whey protein', cat: 'Mercearia', unit: 'un', gramsPerUnit: 900, threshold: 60 },
+  { id: 'doce_leite', name: 'Doce de leite', cat: 'Doces', unit: 'un', gramsPerUnit: 400, threshold: 60 },
+  { id: 'leite_condensado', name: 'Leite condensado', cat: 'Doces', unit: 'un', gramsPerUnit: 395, threshold: 60 },
+  { id: 'chocolate70', name: 'Chocolate 70% cacau', cat: 'Doces', unit: 'un', gramsPerUnit: 100, threshold: 40 },
+];
+
+const FRUIT_IDS = ['banana', 'uva', 'morango', 'maca', 'mamao', 'melancia'];
+
+// Ingredient breakdown per diet preset, used to auto-decrement pantry stock when a preset is logged.
+// { id, g } = fixed ingredient. { fruit: g } = generic fruit slot (resolved to whichever tracked fruit has the lowest stock).
+// { fruitChoice: [ids], g } = pick lowest-stock among a restricted set.
+const DIET_INGREDIENTS = {
+  b1s: [{ id: 'banana', g: 100 }, { id: 'aveia', g: 40 }, { id: 'leite', g: 200 }],
+  b1c: [{ id: 'banana', g: 100 }, { id: 'aveia', g: 40 }, { id: 'leite', g: 200 }, { id: 'whey', g: 30 }],
+  b2: [{ id: 'ovo', g: 100 }, { id: 'pao_integral', g: 75 }, { id: 'queijo_minas', g: 30 }, { fruit: 100 }],
+  b3: [{ id: 'iogurte', g: 200 }, { id: 'granola', g: 30 }, { fruit: 100 }],
+  b4: [{ id: 'tapioca_goma', g: 40 }, { id: 'frango_desfiado', g: 60 }, { fruit: 100 }],
+  m1: [{ id: 'frango_grelhado', g: 200 }, { id: 'arroz_branco', g: 150 }, { id: 'feijao', g: 100 }, { id: 'pimentao', g: 100 }],
+  m2: [{ id: 'carne_moida', g: 200 }, { id: 'arroz_branco', g: 150 }, { id: 'berinjela', g: 100 }],
+  m3: [{ id: 'frango_desfiado', g: 180 }, { id: 'batata_inglesa', g: 220 }, { id: 'chuchu', g: 100 }],
+  m4: [{ id: 'tilapia', g: 200 }, { id: 'arroz_branco', g: 150 }, { id: 'abobrinha', g: 100 }],
+  s1: [{ id: 'iogurte', g: 200 }, { fruit: 100 }],
+  s2: [{ id: 'queijo_cottage', g: 100 }, { fruit: 100 }],
+  s3: [{ id: 'pao_integral', g: 50 }, { id: 'frango_desfiado', g: 50 }],
+  s4: [{ id: 'whey', g: 30 }, { fruit: 100 }],
+  s5: [{ id: 'castanhas', g: 20 }, { fruit: 100 }],
+  t1: [{ id: 'leite_po', g: 20 }, { fruitChoice: ['uva', 'morango'], g: 100 }],
+  t2: [{ id: 'doce_leite', g: 20 }, { fruit: 100 }],
+  t3: [{ id: 'chocolate70', g: 20 }],
+};
+
+function resolveLowestStock(stock, candidates) {
+  let best = candidates[0];
+  let bestVal = stock[best] ?? 0;
+  for (const c of candidates.slice(1)) {
+    const v = stock[c] ?? 0;
+    if (v < bestVal) { best = c; bestVal = v; }
+  }
+  return best;
+}
+
+function computeDecrements(ingredients, stock) {
+  const out = [];
+  for (const ing of ingredients) {
+    if (ing.id) out.push({ id: ing.id, grams: ing.g });
+    else if (ing.fruit) out.push({ id: resolveLowestStock(stock, FRUIT_IDS), grams: ing.fruit });
+    else if (ing.fruitChoice) out.push({ id: resolveLowestStock(stock, ing.fruitChoice), grams: ing.g });
+  }
+  return out;
+}
+
+function applyDecrements(pantry, decrements) {
+  const stock = { ...pantry.stock };
+  const warned = { ...pantry.warned };
+  const newlyLow = [];
+  for (const d of decrements) {
+    const item = PANTRY_ITEMS.find((p) => p.id === d.id);
+    if (!item) continue;
+    const yieldFactor = item.yieldFactor || 1;
+    const rawGrams = d.grams / yieldFactor;
+    const prev = stock[d.id] ?? 0;
+    const next = Math.max(0, prev - rawGrams);
+    stock[d.id] = next;
+    if (prev > item.threshold && next <= item.threshold && !warned[d.id]) {
+      newlyLow.push(item.name);
+      warned[d.id] = true;
+    }
+  }
+  return { stock, warned, newlyLow };
+}
+
+function formatStock(item, stockGrams, gramsPerUnitOverride) {
+  const gpu = gramsPerUnitOverride || item.gramsPerUnit;
+  const amount = stockGrams / gpu;
+  const rounded = amount < 10 ? Math.round(amount * 10) / 10 : Math.round(amount);
+  if (item.isPackage) {
+    return `${rounded} pacote${rounded === 1 ? '' : 's'} (${Math.round(stockGrams)}g)`;
+  }
+  return `${rounded} ${item.unit}`;
+}
+
+function emptyPantry() {
+  return { stock: {}, warned: {}, recentPurchases: [], unitSizes: {} };
+}
+
+/* ============================== HELPERS ============================== */
+function formatDateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function getLastNDates(n) {
+  const arr = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    arr.push(formatDateKey(d));
+  }
+  return arr;
+}
+function weekdayLabel(dateKey) {
+  const d = new Date(dateKey + 'T00:00:00');
+  return WEEKDAYS[d.getDay()];
+}
+const STORAGE_PREFIX = 'noponto:';
+function loadJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch (e) {
+    return fallback;
+  }
+}
+function saveJSON(key, value) {
+  try {
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value));
+  } catch (e) {
+    console.error('Erro ao salvar', key, e);
+  }
+}
+function emptyDay() {
+  return { meals: [], waterMl: 0, exercise: { done: false, type: '', duration: '' } };
+}
+
+/* ============================== SMALL UI PIECES ============================== */
+function cardStyle(extra) {
+  return {
+    background: PALETTE.surface,
+    border: `1px solid ${PALETTE.border}`,
+    borderRadius: 18,
+    padding: 16,
+    ...extra,
+  };
+}
+
+function RingGauge({ value, goal, size = 190, stroke = 15, label }) {
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const pct = goal > 0 ? value / goal : 0;
+  const clamped = Math.min(Math.max(pct, 0), 1);
+  const dashOffset = circumference * (1 - clamped);
+  const over = value > goal;
+  const arcColor = over ? PALETTE.paprika : PALETTE.honey;
+  const center = size / 2;
+
+  const ticks = [];
+  for (let i = 0; i < 10; i++) {
+    const angle = (i * 36 - 90) * (Math.PI / 180);
+    const outerR = r - stroke / 2 - 3;
+    const innerR = outerR - 7;
+    ticks.push({
+      x1: center + innerR * Math.cos(angle),
+      y1: center + innerR * Math.sin(angle),
+      x2: center + outerR * Math.cos(angle),
+      y2: center + outerR * Math.sin(angle),
+    });
+  }
+
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size}>
+        {ticks.map((t, i) => (
+          <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke={PALETTE.border} strokeWidth={2} strokeLinecap="round" />
+        ))}
+        <g style={{ transform: 'rotate(-90deg)', transformOrigin: `${center}px ${center}px` }}>
+          <circle cx={center} cy={center} r={r} fill="none" stroke={PALETTE.track} strokeWidth={stroke} />
+          <circle
+            cx={center}
+            cy={center}
+            r={r}
+            fill="none"
+            stroke={arcColor}
+            strokeWidth={stroke}
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dashoffset 0.6s ease, stroke 0.3s ease' }}
+          />
+        </g>
+      </svg>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ fontFamily: FONT_MONO, fontSize: size * 0.2, fontWeight: 600, color: PALETTE.text, lineHeight: 1 }}>
+          {Math.round(value)}
+        </div>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted, marginTop: 4 }}>/ {goal} kcal</div>
+        {label && (
+          <div style={{ fontSize: 11, color: PALETTE.textMuted, marginTop: 6, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+            {label}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatBar({ icon, label, value, goal, unit, color, extra }) {
+  const pct = goal > 0 ? Math.min(value / goal, 1) * 100 : 0;
+  return (
+    <div style={cardStyle({ flex: 1 })}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, color: PALETTE.textMuted }}>
+        {icon}
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase' }}>{label}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 24, fontWeight: 600, color: PALETTE.text }}>{value}</span>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>/ {goal}{unit}</span>
+      </div>
+      <div style={{ height: 8, borderRadius: 4, background: PALETTE.track, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 4, transition: 'width 0.5s ease' }} />
+      </div>
+      {extra}
+    </div>
+  );
+}
+
+function PillButton({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '8px 14px',
+        borderRadius: 999,
+        border: `1px solid ${active ? PALETTE.honey : PALETTE.border}`,
+        background: active ? PALETTE.honey : 'transparent',
+        color: active ? '#1B1815' : PALETTE.textMuted,
+        fontFamily: FONT_SANS,
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PrimaryButton({ onClick, children, disabled, style }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        padding: '12px 18px',
+        borderRadius: 14,
+        border: 'none',
+        background: disabled ? PALETTE.track : PALETTE.honey,
+        color: disabled ? PALETTE.textMuted : '#1B1815',
+        fontFamily: FONT_SANS,
+        fontSize: 14,
+        fontWeight: 800,
+        cursor: disabled ? 'default' : 'pointer',
+        width: '100%',
+        ...style,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function WeekBars({ data, goal }) {
+  const max = Math.max(goal, ...data.map((d) => d.kcal), 1);
+  const chartH = 120;
+  const goalY = chartH - (goal / max) * chartH;
+  return (
+    <div style={{ position: 'relative', paddingTop: 4 }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: goalY + 4, borderTop: `1px dashed ${PALETTE.sage}` }} />
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: chartH }}>
+        {data.map((d) => {
+          const h = (d.kcal / max) * chartH;
+          const over = d.kcal > goal;
+          return (
+            <div key={d.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end' }}>
+              <div
+                style={{
+                  width: '100%',
+                  height: Math.max(h, 2),
+                  background: d.kcal > 0 ? (over ? PALETTE.paprika : PALETTE.honey) : PALETTE.track,
+                  borderRadius: 5,
+                  transition: 'height .5s ease',
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+        {data.map((d) => (
+          <div key={d.date} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: PALETTE.textMuted }}>
+            {weekdayLabel(d.date)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WeightChart({ weights }) {
+  const sorted = [...weights].sort((a, b) => (a.date < b.date ? -1 : 1));
+  if (sorted.length < 2) {
+    return <p style={{ fontSize: 13, color: PALETTE.textMuted }}>Registre pelo menos 2 pesagens pra ver a tendência.</p>;
+  }
+  const w = 300, h = 130, pad = 22;
+  const kgs = sorted.map((p) => p.kg);
+  const min = Math.min(...kgs, 85) - 2;
+  const max = Math.max(...kgs) + 2;
+  const xStep = (w - pad * 2) / (sorted.length - 1);
+  const yFor = (kg) => h - pad - ((kg - min) / (max - min)) * (h - pad * 2);
+  const points = sorted.map((pt, i) => `${pad + i * xStep},${yFor(pt.kg)}`).join(' ');
+  const goalY = yFor(85);
+  const goalY90 = yFor(90);
+  return (
+    <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ overflow: 'visible' }}>
+      <line x1={pad} y1={goalY90} x2={w - pad} y2={goalY90} stroke={PALETTE.textMuted} strokeDasharray="3 4" strokeWidth="1" />
+      <line x1={pad} y1={goalY} x2={w - pad} y2={goalY} stroke={PALETTE.sage} strokeDasharray="3 4" strokeWidth="1" />
+      <polyline points={points} fill="none" stroke={PALETTE.honey} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {sorted.map((pt, i) => (
+        <circle key={i} cx={pad + i * xStep} cy={yFor(pt.kg)} r="3.5" fill={PALETTE.honey} />
+      ))}
+    </svg>
+  );
+}
+
+/* ============================== MAIN APP ============================== */
+function App() {
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('hoje');
+  const [settings, setSettings] = useState({ kcalGoal: 2100, proteinGoal: 170, waterGoalMl: 3500 });
+  const [logs, setLogs] = useState({});
+  const [weights, setWeights] = useState([]);
+  const [pantry, setPantry] = useState(emptyPantry());
+  const [toast, setToast] = useState('');
+
+  const dateKey = useMemo(() => formatDateKey(new Date()), []);
+  const today = logs[dateKey] || emptyDay();
+
+  const [mealType, setMealType] = useState('almoco');
+  const [expandedPreset, setExpandedPreset] = useState(null);
+  const [search, setSearch] = useState('');
+  const [selectedFood, setSelectedFood] = useState(null);
+  const [amount, setAmount] = useState('');
+  const [weightInput, setWeightInput] = useState('');
+  const [settingsForm, setSettingsForm] = useState(null);
+  const [exerciseForm, setExerciseForm] = useState({ type: WORKOUT_TYPES[0], duration: '' });
+
+  const [pantrySearch, setPantrySearch] = useState('');
+  const [selectedPantryItem, setSelectedPantryItem] = useState(null);
+  const [pantryAmount, setPantryAmount] = useState('');
+  const [pantryUnitSize, setPantryUnitSize] = useState('');
+
+  const [freeDescription, setFreeDescription] = useState('');
+  const [freeKcal, setFreeKcal] = useState('');
+  const [freeProt, setFreeProt] = useState('');
+
+  useEffect(() => {
+    const s = loadJSON('settings', { kcalGoal: 2100, proteinGoal: 170, waterGoalMl: 3500 });
+    const l = loadJSON('logs', {});
+    const w = loadJSON('weights', []);
+    const p = loadJSON('pantry', emptyPantry());
+    setSettings(s);
+    setLogs(l);
+    setWeights(w);
+    setPantry({ stock: p.stock || {}, warned: p.warned || {}, recentPurchases: p.recentPurchases || [], unitSizes: p.unitSizes || {} });
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(''), 2600);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
+
+  const updateToday = useCallback(
+    (updater) => {
+      setLogs((prev) => {
+        const current = prev[dateKey] || emptyDay();
+        const next = updater(current);
+        const nextLogs = { ...prev, [dateKey]: next };
+        saveJSON('logs', nextLogs);
+        return nextLogs;
+      });
+    },
+    [dateKey]
+  );
+
+  function addMealEntry(entry) {
+    updateToday((day) => ({ ...day, meals: [...day.meals, { ...entry, ts: Date.now() }] }));
+    setSelectedFood(null);
+    setAmount('');
+
+    let ingredients = [];
+    if (entry.presetId && DIET_INGREDIENTS[entry.presetId]) {
+      ingredients = DIET_INGREDIENTS[entry.presetId];
+    } else if (entry.foodId && entry.grams) {
+      ingredients = [{ id: entry.foodId, g: entry.grams }];
+    }
+
+    let toastMsg = `${entry.name} registrado`;
+    if (ingredients.length > 0) {
+      const decrements = computeDecrements(ingredients, pantry.stock);
+      const { stock, warned, newlyLow } = applyDecrements(pantry, decrements);
+      const nextPantry = { ...pantry, stock, warned };
+      setPantry(nextPantry);
+      saveJSON('pantry', nextPantry);
+      if (newlyLow.length > 0) {
+        toastMsg += ` · acabando: ${newlyLow.join(', ')}`;
+      }
+    }
+    setToast(toastMsg);
+  }
+
+  function removeMealEntry(ts) {
+    updateToday((day) => ({ ...day, meals: day.meals.filter((m) => m.ts !== ts) }));
+  }
+
+  function addWater(ml) {
+    updateToday((day) => ({ ...day, waterMl: (day.waterMl || 0) + ml }));
+  }
+
+  function saveExercise() {
+    updateToday((day) => ({ ...day, exercise: { done: true, type: exerciseForm.type, duration: exerciseForm.duration } }));
+    setToast('Treino registrado');
+  }
+
+  function clearExercise() {
+    updateToday((day) => ({ ...day, exercise: { done: false, type: '', duration: '' } }));
+  }
+
+  function saveSettingsForm() {
+    const next = {
+      kcalGoal: Number(settingsForm.kcalGoal) || settings.kcalGoal,
+      proteinGoal: Number(settingsForm.proteinGoal) || settings.proteinGoal,
+      waterGoalMl: Number(settingsForm.waterGoalMl) || settings.waterGoalMl,
+    };
+    setSettings(next);
+    saveJSON('settings', next);
+    setSettingsForm(null);
+    setToast('Metas atualizadas');
+  }
+
+  function saveWeight() {
+    const kg = Number(weightInput.replace(',', '.'));
+    if (!kg || kg <= 0) return;
+    const next = [...weights.filter((w) => w.date !== dateKey), { date: dateKey, kg }];
+    setWeights(next);
+    saveJSON('weights', next);
+    setWeightInput('');
+    setToast('Peso registrado');
+  }
+
+  function addFreeEntry() {
+    if (!freeDescription.trim() || !freeKcal) return;
+    addMealEntry({
+      mealType,
+      name: freeDescription.trim(),
+      kcal: Math.round(Number(freeKcal)),
+      prot: Number(freeProt) || 0,
+    });
+    setFreeDescription('');
+    setFreeKcal('');
+    setFreeProt('');
+  }
+
+  function addPantryPurchase() {
+    if (!selectedPantryItem || !pantryAmount || Number(pantryAmount) <= 0) return;
+    const unitSize = Number(pantryUnitSize) > 0 ? Number(pantryUnitSize) : selectedPantryItem.gramsPerUnit;
+    const grams = Number(pantryAmount) * unitSize;
+    const nextStock = { ...pantry.stock, [selectedPantryItem.id]: (pantry.stock[selectedPantryItem.id] || 0) + grams };
+    const nextWarned = { ...pantry.warned };
+    if (nextStock[selectedPantryItem.id] > selectedPantryItem.threshold) nextWarned[selectedPantryItem.id] = false;
+    const nextUnitSizes = { ...pantry.unitSizes, [selectedPantryItem.id]: unitSize };
+    const nextPurchases = [
+      { ts: Date.now(), name: selectedPantryItem.name, amount: pantryAmount, unit: selectedPantryItem.unit },
+      ...pantry.recentPurchases,
+    ].slice(0, 8);
+    const next = { stock: nextStock, warned: nextWarned, recentPurchases: nextPurchases, unitSizes: nextUnitSizes };
+    setPantry(next);
+    saveJSON('pantry', next);
+    setToast(`${selectedPantryItem.name} adicionado à despensa`);
+    setSelectedPantryItem(null);
+    setPantryAmount('');
+    setPantryUnitSize('');
+    setPantrySearch('');
+  }
+
+  const totalKcal = today.meals.reduce((s, m) => s + m.kcal, 0);
+  const totalProt = today.meals.reduce((s, m) => s + m.prot, 0);
+  const treatLoggedToday = today.meals.some((m) => m.mealType === 'doce');
+  const over = totalKcal - settings.kcalGoal;
+
+  const week = getLastNDates(7).map((d) => {
+    const day = logs[d] || emptyDay();
+    return { date: d, kcal: day.meals.reduce((s, m) => s + m.kcal, 0) };
+  });
+
+  const presetKey = PRESET_MAP[mealType];
+  const presets = presetKey ? DIET[presetKey] : [];
+
+  const filteredFoods = useMemo(() => {
+    if (!search.trim()) return [];
+    const q = search.trim().toLowerCase();
+    return FOODS.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [search]);
+
+  const previewKcal = selectedFood && amount ? Math.round((selectedFood.kcal100 / 100) * Number(amount)) : 0;
+  const previewProt = selectedFood && amount ? Math.round((selectedFood.prot100 / 100) * Number(amount) * 10) / 10 : 0;
+
+  const filteredPantryItems = useMemo(() => {
+    if (!pantrySearch.trim()) return [];
+    const q = pantrySearch.trim().toLowerCase();
+    return PANTRY_ITEMS.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [pantrySearch]);
+
+  const lowStockItems = useMemo(
+    () => PANTRY_ITEMS.filter((p) => (pantry.stock[p.id] ?? 0) > 0 && (pantry.stock[p.id] ?? 0) <= p.threshold),
+    [pantry.stock]
+  );
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', background: PALETTE.bg, color: PALETTE.textMuted, fontFamily: FONT_SANS }}>
+        Carregando seus dados…
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: PALETTE.bg, minHeight: '100vh', fontFamily: FONT_SANS, color: PALETTE.text }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
+        * { box-sizing: border-box; }
+        input, select { font-family: ${FONT_SANS}; }
+        input:focus, select:focus { outline: 2px solid ${PALETTE.honey}; outline-offset: 1px; }
+        button:focus-visible { outline: 2px solid ${PALETTE.honey}; outline-offset: 2px; }
+      `}</style>
+
+      <div style={{ maxWidth: 440, margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <div style={{ padding: '20px 18px 8px' }}>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>No Ponto</div>
+          <div style={{ fontSize: 12.5, color: PALETTE.textMuted, marginTop: 2 }}>seu painel de dieta, água e treino</div>
+        </div>
+
+        {/* Toast */}
+        {toast && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 14,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              maxWidth: '90%',
+              textAlign: 'center',
+              background: PALETTE.honey,
+              color: '#1B1815',
+              padding: '8px 16px',
+              borderRadius: 999,
+              fontSize: 12.5,
+              fontWeight: 700,
+              zIndex: 50,
+              boxShadow: '0 6px 18px rgba(0,0,0,0.35)',
+            }}
+          >
+            {toast}
+          </div>
+        )}
+
+        {/* Content */}
+        <div style={{ flex: 1, padding: '10px 18px 100px' }}>
+          {tab === 'hoje' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 4px' }}>
+                <RingGauge value={totalKcal} goal={settings.kcalGoal} label="kcal hoje" />
+              </div>
+
+              {over > 0 && (
+                <div style={cardStyle({ background: 'rgba(194,84,46,0.14)', border: `1px solid ${PALETTE.paprika}` })}>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: PALETTE.paprika, marginBottom: 4 }}>
+                    Passou {Math.round(over)} kcal da meta de hoje
+                  </div>
+                  <div style={{ fontSize: 13, color: PALETTE.text, lineHeight: 1.4 }}>
+                    Sugestão: corte cerca de {Math.round(over / 1.3)}g de arroz (ou equivalente) na próxima refeição
+                    {!treatLoggedToday ? ', ou pule o doce de hoje — só ele já cobre boa parte disso.' : '.'}
+                  </div>
+                </div>
+              )}
+
+              {lowStockItems.length > 0 && (
+                <button
+                  onClick={() => setTab('despensa')}
+                  style={{
+                    ...cardStyle({ background: 'rgba(226,169,59,0.1)', border: `1px solid ${PALETTE.honey}`, textAlign: 'left', cursor: 'pointer' }),
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    width: '100%',
+                  }}
+                >
+                  <AlertTriangle size={18} color={PALETTE.honey} style={{ flexShrink: 0 }} />
+                  <div style={{ fontSize: 13 }}>
+                    <strong>{lowStockItems.length} {lowStockItems.length === 1 ? 'item acabando' : 'itens acabando'}</strong> na despensa:{' '}
+                    {lowStockItems.map((i) => i.name).join(', ')}
+                  </div>
+                </button>
+              )}
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <StatBar icon={<Flame size={15} />} label="Proteína" value={Math.round(totalProt)} goal={settings.proteinGoal} unit="g" color={PALETTE.honey} />
+                <StatBar
+                  icon={<Droplet size={15} />}
+                  label="Água"
+                  value={(today.waterMl || 0) / 1000}
+                  goal={settings.waterGoalMl / 1000}
+                  unit="L"
+                  color={PALETTE.teal}
+                  extra={
+                    <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                      {[200, 300, 500].map((ml) => (
+                        <button
+                          key={ml}
+                          onClick={() => addWater(ml)}
+                          style={{
+                            flex: 1,
+                            padding: '6px 0',
+                            borderRadius: 8,
+                            border: `1px solid ${PALETTE.border}`,
+                            background: 'transparent',
+                            color: PALETTE.teal,
+                            fontFamily: FONT_MONO,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          +{ml}
+                        </button>
+                      ))}
+                    </div>
+                  }
+                />
+              </div>
+
+              <div style={cardStyle()}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: PALETTE.textMuted }}>
+                  <Dumbbell size={15} />
+                  <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase' }}>Treino</span>
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                  {getLastNDates(7).map((d) => {
+                    const done = !!(logs[d] || {}).exercise?.done;
+                    const isToday = d === dateKey;
+                    return (
+                      <div
+                        key={d}
+                        style={{
+                          flex: 1,
+                          aspectRatio: '1',
+                          borderRadius: 8,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: done ? PALETTE.sage : PALETTE.track,
+                          border: isToday ? `1.5px solid ${PALETTE.honey}` : 'none',
+                          color: done ? '#1B1815' : PALETTE.textMuted,
+                          fontSize: 11,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {weekdayLabel(d)}
+                      </div>
+                    );
+                  })}
+                </div>
+                {today.exercise?.done ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 13 }}>
+                      Hoje: <strong>{today.exercise.type}</strong>
+                      {today.exercise.duration ? ` · ${today.exercise.duration}min` : ''}
+                    </div>
+                    <button onClick={clearExercise} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
+                      desmarcar
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select
+                      value={exerciseForm.type}
+                      onChange={(e) => setExerciseForm({ ...exerciseForm, type: e.target.value })}
+                      style={{ flex: 1, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 8px', fontSize: 13 }}
+                    >
+                      {WORKOUT_TYPES.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="min"
+                      value={exerciseForm.duration}
+                      onChange={(e) => setExerciseForm({ ...exerciseForm, duration: e.target.value })}
+                      style={{ width: 64, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 8px', fontSize: 13 }}
+                    />
+                    <button
+                      onClick={saveExercise}
+                      style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: PALETTE.honey, color: '#1B1815', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                    >
+                      Salvar
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div style={cardStyle()}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 10 }}>
+                  Registrado hoje
+                </div>
+                {today.meals.length === 0 ? (
+                  <div style={{ fontSize: 13, color: PALETTE.textMuted }}>Nenhuma refeição registrada ainda. Toque em "Refeições" abaixo pra começar.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {today.meals.map((m) => (
+                      <div key={m.ts} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <div style={{ fontSize: 13, flex: 1 }}>{m.name}</div>
+                        <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>{m.kcal} kcal</div>
+                        <button onClick={() => removeMealEntry(m.ts)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer', padding: 2 }}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {tab === 'refeicoes' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {MEAL_TYPES.map((mt) => (
+                  <PillButton key={mt.id} active={mealType === mt.id} onClick={() => { setMealType(mt.id); setSelectedFood(null); setSearch(''); }}>
+                    {mt.label}
+                  </PillButton>
+                ))}
+              </div>
+
+              {presets.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 8 }}>Da dieta</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {presets.map((p) => {
+                      const expanded = expandedPreset === p.id;
+                      return (
+                        <div key={p.id} style={cardStyle({ border: `1px solid ${PALETTE.border}`, padding: 0 })}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => addMealEntry({ mealType, presetId: p.id, name: p.name, kcal: p.kcal, prot: p.prot })}
+                              onKeyDown={(e) => { if (e.key === 'Enter') addMealEntry({ mealType, presetId: p.id, name: p.name, kcal: p.kcal, prot: p.prot }); }}
+                              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flex: 1, cursor: 'pointer', padding: '14px 8px 14px 16px' }}
+                            >
+                              <span style={{ fontSize: 13.5 }}>{p.name}</span>
+                              <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.honey, flexShrink: 0 }}>{p.kcal} kcal</span>
+                            </div>
+                            {p.prep && (
+                              <button
+                                onClick={() => setExpandedPreset(expanded ? null : p.id)}
+                                aria-label="Ver modo de preparo"
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: PALETTE.textMuted,
+                                  cursor: 'pointer',
+                                  padding: '14px 14px 14px 6px',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <ChevronDown size={16} style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                              </button>
+                            )}
+                          </div>
+                          {expanded && p.prep && (
+                            <div
+                              style={{
+                                fontSize: 12.5,
+                                color: PALETTE.textMuted,
+                                lineHeight: 1.5,
+                                padding: '0 16px 14px 16px',
+                                borderTop: `1px solid ${PALETTE.border}`,
+                                marginTop: -1,
+                                paddingTop: 10,
+                              }}
+                            >
+                              {p.prep}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 8 }}>Buscar alimento</div>
+                <div style={{ position: 'relative', marginBottom: 10 }}>
+                  <Search size={15} style={{ position: 'absolute', left: 12, top: 12, color: PALETTE.textMuted }} />
+                  <input
+                    value={search}
+                    onChange={(e) => { setSearch(e.target.value); setSelectedFood(null); }}
+                    placeholder="ex: arroz, frango, refrigerante..."
+                    style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 12, color: PALETTE.text, padding: '10px 12px 10px 34px', fontSize: 13.5 }}
+                  />
+                </div>
+
+                {filteredFoods.length > 0 && !selectedFood && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {filteredFoods.map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => { setSelectedFood(f); setAmount(String(f.portion)); }}
+                        style={{ ...cardStyle({ textAlign: 'left' }), border: `1px solid ${PALETTE.border}`, cursor: 'pointer', padding: '10px 14px' }}
+                      >
+                        <div style={{ fontSize: 13.5 }}>{f.name}</div>
+                        <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginTop: 2 }}>{f.kcal100} kcal / 100{f.unit}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {selectedFood && (
+                  <div style={cardStyle()}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{selectedFood.name}</span>
+                      <button onClick={() => setSelectedFood(null)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer' }}>
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <input
+                        type="number"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        style={{ width: 90, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 10px', fontSize: 14 }}
+                      />
+                      <span style={{ fontSize: 13, color: PALETTE.textMuted }}>{selectedFood.unit}</span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.honey, marginLeft: 'auto' }}>
+                        {previewKcal} kcal · {previewProt}g prot
+                      </span>
+                    </div>
+                    <PrimaryButton
+                      onClick={() =>
+                        addMealEntry({
+                          mealType,
+                          foodId: selectedFood.id,
+                          grams: Number(amount),
+                          name: `${selectedFood.name} (${amount}${selectedFood.unit})`,
+                          kcal: previewKcal,
+                          prot: previewProt,
+                        })
+                      }
+                      disabled={!amount || Number(amount) <= 0}
+                    >
+                      <Plus size={15} style={{ verticalAlign: -3, marginRight: 4 }} /> Adicionar
+                    </PrimaryButton>
+                  </div>
+                )}
+              </div>
+
+              <div style={cardStyle()}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 4 }}>
+                  Comeu algo fora da dieta?
+                </div>
+                <div style={{ fontSize: 12, color: PALETTE.textMuted, marginBottom: 10, lineHeight: 1.4 }}>
+                  Prato de restaurante, comeu fora, ou algo que não está na lista. Dica: tire uma foto e pergunte as calorias no app do Claude, depois digite o resultado aqui.
+                </div>
+                <textarea
+                  value={freeDescription}
+                  onChange={(e) => setFreeDescription(e.target.value)}
+                  placeholder="ex: X-tudo com batata frita"
+                  rows={2}
+                  style={{
+                    width: '100%',
+                    background: PALETTE.surfaceAlt,
+                    border: `1px solid ${PALETTE.border}`,
+                    borderRadius: 12,
+                    color: PALETTE.text,
+                    padding: '10px 12px',
+                    fontSize: 13.5,
+                    marginBottom: 12,
+                    resize: 'vertical',
+                  }}
+                />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: PALETTE.textMuted, marginBottom: 3 }}>kcal</div>
+                    <input
+                      type="number"
+                      value={freeKcal}
+                      onChange={(e) => setFreeKcal(e.target.value)}
+                      placeholder="0"
+                      style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 10px', fontSize: 14 }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: PALETTE.textMuted, marginBottom: 3 }}>proteína (g)</div>
+                    <input
+                      type="number"
+                      value={freeProt}
+                      onChange={(e) => setFreeProt(e.target.value)}
+                      placeholder="0"
+                      style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 10px', fontSize: 14 }}
+                    />
+                  </div>
+                </div>
+                <PrimaryButton onClick={addFreeEntry} disabled={!freeDescription.trim() || !freeKcal}>
+                  <Plus size={15} style={{ verticalAlign: -3, marginRight: 4 }} /> Adicionar
+                </PrimaryButton>
+              </div>
+
+              <div style={cardStyle()}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 10 }}>
+                  Hoje · {Math.round(totalKcal)} kcal / {Math.round(totalProt)}g prot
+                </div>
+                {today.meals.length === 0 ? (
+                  <div style={{ fontSize: 13, color: PALETTE.textMuted }}>Nada registrado ainda.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {today.meals.map((m) => (
+                      <div key={m.ts} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <div style={{ fontSize: 13, flex: 1 }}>{m.name}</div>
+                        <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>{m.kcal} kcal</div>
+                        <button onClick={() => removeMealEntry(m.ts)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer', padding: 2 }}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {tab === 'despensa' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {lowStockItems.length > 0 && (
+                <div style={cardStyle({ background: 'rgba(226,169,59,0.1)', border: `1px solid ${PALETTE.honey}` })}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <AlertTriangle size={16} color={PALETTE.honey} />
+                    <span style={{ fontWeight: 800, fontSize: 13.5 }}>Acabando</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {lowStockItems.map((i) => (
+                      <div key={i.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{i.name}</span>
+                        <span style={{ fontFamily: FONT_MONO, color: PALETTE.honey }}>{formatStock(i, pantry.stock[i.id] || 0, pantry.unitSizes[i.id])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={cardStyle()}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 8 }}>
+                  Registrar compra
+                </div>
+                <div style={{ position: 'relative', marginBottom: 10 }}>
+                  <Search size={15} style={{ position: 'absolute', left: 12, top: 12, color: PALETTE.textMuted }} />
+                  <input
+                    value={pantrySearch}
+                    onChange={(e) => { setPantrySearch(e.target.value); setSelectedPantryItem(null); }}
+                    placeholder="o que você comprou?"
+                    style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 12, color: PALETTE.text, padding: '10px 12px 10px 34px', fontSize: 13.5 }}
+                  />
+                </div>
+
+                {filteredPantryItems.length > 0 && !selectedPantryItem && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {filteredPantryItems.map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => {
+                          setSelectedPantryItem(f);
+                          setPantryAmount('1');
+                          setPantryUnitSize(String(pantry.unitSizes[f.id] || f.gramsPerUnit));
+                        }}
+                        style={{ ...cardStyle({ textAlign: 'left' }), border: `1px solid ${PALETTE.border}`, cursor: 'pointer', padding: '10px 14px' }}
+                      >
+                        <div style={{ fontSize: 13.5 }}>{f.name}</div>
+                        <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginTop: 2 }}>{f.cat}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {selectedPantryItem && (
+                  <div style={cardStyle()}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{selectedPantryItem.name}</span>
+                      <button onClick={() => setSelectedPantryItem(null)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer' }}>
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: PALETTE.textMuted, marginBottom: 3 }}>quantidade ({selectedPantryItem.unit})</div>
+                        <input
+                          type="number"
+                          value={pantryAmount}
+                          onChange={(e) => setPantryAmount(e.target.value)}
+                          style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 10px', fontSize: 14 }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: PALETTE.textMuted, marginBottom: 3 }}>peso por {selectedPantryItem.unit} (g)</div>
+                        <input
+                          type="number"
+                          value={pantryUnitSize}
+                          onChange={(e) => setPantryUnitSize(e.target.value)}
+                          style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 10px', fontSize: 14 }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginBottom: 10 }}>
+                      Ajuste o peso se o pacote/pote que você comprou for diferente — o app lembra esse tamanho da próxima vez. Já tem: {formatStock(selectedPantryItem, pantry.stock[selectedPantryItem.id] || 0, pantry.unitSizes[selectedPantryItem.id])}
+                    </div>
+                    <PrimaryButton onClick={addPantryPurchase} disabled={!pantryAmount || Number(pantryAmount) <= 0}>
+                      <Plus size={15} style={{ verticalAlign: -3, marginRight: 4 }} /> Adicionar à despensa
+                    </PrimaryButton>
+                  </div>
+                )}
+              </div>
+
+              {PANTRY_CATEGORIES.map((cat) => {
+                const items = PANTRY_ITEMS.filter((p) => p.cat === cat);
+                return (
+                  <div key={cat} style={cardStyle()}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 10 }}>{cat}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {items.map((p) => {
+                        const stock = pantry.stock[p.id] || 0;
+                        const low = stock > 0 && stock <= p.threshold;
+                        const empty = stock <= 0;
+                        return (
+                          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 13, color: empty ? PALETTE.textMuted : PALETTE.text }}>{p.name}</span>
+                            <span
+                              style={{
+                                fontFamily: FONT_MONO,
+                                fontSize: 12,
+                                fontWeight: low ? 700 : 400,
+                                color: low ? PALETTE.paprika : empty ? PALETTE.textMuted : PALETTE.text,
+                              }}
+                            >
+                              {formatStock(p, stock, pantry.unitSizes[p.id])}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {pantry.recentPurchases.length > 0 && (
+                <div style={cardStyle()}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 10 }}>
+                    Últimas compras
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {pantry.recentPurchases.map((pu) => (
+                      <div key={pu.ts} style={{ fontSize: 12.5, color: PALETTE.textMuted, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{pu.name}</span>
+                        <span style={{ fontFamily: FONT_MONO }}>+{pu.amount} {pu.unit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === 'progresso' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={cardStyle()}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 10 }}>Últimos 7 dias (kcal)</div>
+                <WeekBars data={week} goal={settings.kcalGoal} />
+              </div>
+
+              <div style={cardStyle()}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 10 }}>Peso</div>
+                <WeightChart weights={weights} />
+                <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                  <input
+                    type="number"
+                    placeholder="peso de hoje (kg)"
+                    value={weightInput}
+                    onChange={(e) => setWeightInput(e.target.value)}
+                    style={{ flex: 1, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 10px', fontSize: 13 }}
+                  />
+                  <button onClick={saveWeight} style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: PALETTE.honey, color: '#1B1815', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+                    Salvar
+                  </button>
+                </div>
+              </div>
+
+              <div style={cardStyle()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted }}>Metas diárias</div>
+                  {!settingsForm && (
+                    <button
+                      onClick={() => setSettingsForm({ kcalGoal: settings.kcalGoal, proteinGoal: settings.proteinGoal, waterGoalMl: settings.waterGoalMl })}
+                      style={{ background: 'none', border: 'none', color: PALETTE.honey, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      editar
+                    </button>
+                  )}
+                </div>
+                {!settingsForm ? (
+                  <div style={{ fontSize: 13, lineHeight: 1.8, color: PALETTE.textMuted }}>
+                    <div>Calorias: <strong style={{ color: PALETTE.text }}>{settings.kcalGoal} kcal</strong></div>
+                    <div>Proteína: <strong style={{ color: PALETTE.text }}>{settings.proteinGoal}g</strong></div>
+                    <div>Água: <strong style={{ color: PALETTE.text }}>{settings.waterGoalMl / 1000}L</strong></div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ fontSize: 12, color: PALETTE.textMuted }}>
+                      Calorias (kcal)
+                      <input
+                        type="number"
+                        value={settingsForm.kcalGoal}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, kcalGoal: e.target.value })}
+                        style={{ width: '100%', marginTop: 4, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '8px 10px', fontSize: 13 }}
+                      />
+                    </label>
+                    <label style={{ fontSize: 12, color: PALETTE.textMuted }}>
+                      Proteína (g)
+                      <input
+                        type="number"
+                        value={settingsForm.proteinGoal}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, proteinGoal: e.target.value })}
+                        style={{ width: '100%', marginTop: 4, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '8px 10px', fontSize: 13 }}
+                      />
+                    </label>
+                    <label style={{ fontSize: 12, color: PALETTE.textMuted }}>
+                      Água (ml)
+                      <input
+                        type="number"
+                        value={settingsForm.waterGoalMl}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, waterGoalMl: e.target.value })}
+                        style={{ width: '100%', marginTop: 4, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '8px 10px', fontSize: 13 }}
+                      />
+                    </label>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                      <button onClick={() => setSettingsForm(null)} style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: `1px solid ${PALETTE.border}`, background: 'transparent', color: PALETTE.textMuted, fontSize: 13, cursor: 'pointer' }}>
+                        Cancelar
+                      </button>
+                      <button onClick={saveSettingsForm} style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', background: PALETTE.honey, color: '#1B1815', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom nav */}
+        <div
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            background: PALETTE.surface,
+            borderTop: `1px solid ${PALETTE.border}`,
+            display: 'flex',
+            padding: '8px 8px calc(8px + env(safe-area-inset-bottom, 0px))',
+            gap: 2,
+          }}
+        >
+          {[
+            { id: 'hoje', label: 'Hoje', Icon: Home },
+            { id: 'refeicoes', label: 'Refeições', Icon: UtensilsCrossed },
+            { id: 'despensa', label: 'Despensa', Icon: Package },
+            { id: 'progresso', label: 'Progresso', Icon: TrendingUp },
+          ].map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 3,
+                padding: '8px 0 6px',
+                borderRadius: 12,
+                border: 'none',
+                background: tab === id ? PALETTE.surfaceAlt : 'transparent',
+                color: tab === id ? PALETTE.honey : PALETTE.textMuted,
+                cursor: 'pointer',
+                position: 'relative',
+              }}
+            >
+              <Icon size={18} />
+              <span style={{ fontSize: 10, fontWeight: 700 }}>{label}</span>
+              {id === 'despensa' && lowStockItems.length > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 4,
+                    right: '28%',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: PALETTE.paprika,
+                  }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const rootEl = document.getElementById('root');
+ReactDOM.createRoot(rootEl).render(<App />);
+</script>
+
+<script>
+  var src = document.getElementById('app-source').textContent;
+  var out = Babel.transform(src, { presets: [['react', { runtime: 'classic' }]] }).code;
+  (0, eval)(out);
+</script>
+</body>
+</html>
