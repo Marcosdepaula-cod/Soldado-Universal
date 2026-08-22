@@ -317,7 +317,7 @@ function saveJSON(key, value) {
   }
 }
 function emptyDay() {
-  return { meals: [], waterMl: 0, exercise: { done: false, type: '', duration: '' } };
+  return { meals: [], waterLog: [], exercise: { done: false, type: '', duration: '' } };
 }
 
 /* ============================== SMALL UI PIECES ============================== */
@@ -466,6 +466,34 @@ function PrimaryButton({ onClick, children, disabled, style }) {
   );
 }
 
+function StockAlertBanner({ items, level, onClick }) {
+  if (!items || items.length === 0) return null;
+  const isEmpty = level === 'empty';
+  const color = isEmpty ? PALETTE.paprika : PALETTE.honey;
+  const bg = isEmpty ? 'rgba(194,84,46,0.14)' : 'rgba(226,169,59,0.12)';
+  const label = isEmpty ? (items.length === 1 ? 'item acabou' : 'itens acabaram') : items.length === 1 ? 'item acabando' : 'itens acabando';
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        ...cardStyle({ background: bg, border: `1px solid ${color}`, textAlign: 'left', cursor: 'pointer' }),
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        width: '100%',
+      }}
+    >
+      <AlertTriangle size={18} color={color} style={{ flexShrink: 0 }} />
+      <div style={{ fontSize: 13 }}>
+        <strong style={{ color }}>
+          {items.length} {label}
+        </strong>{' '}
+        na despensa: {items.map((i) => i.name).join(', ')}
+      </div>
+    </button>
+  );
+}
+
 function WeekBars({ data, goal }) {
   const max = Math.max(goal, ...data.map((d) => d.kcal), 1);
   const chartH = 120;
@@ -540,7 +568,11 @@ function App() {
   const [toast, setToast] = useState('');
 
   const dateKey = useMemo(() => formatDateKey(new Date()), []);
-  const today = logs[dateKey] || emptyDay();
+  const rawToday = logs[dateKey] || emptyDay();
+  const today = {
+    ...rawToday,
+    waterLog: rawToday.waterLog || (rawToday.waterMl ? [{ ts: 0, ml: rawToday.waterMl }] : []),
+  };
 
   const [mealType, setMealType] = useState('almoco');
   const [expandedPreset, setExpandedPreset] = useState(null);
@@ -550,6 +582,10 @@ function App() {
   const [weightInput, setWeightInput] = useState('');
   const [settingsForm, setSettingsForm] = useState(null);
   const [exerciseForm, setExerciseForm] = useState({ type: WORKOUT_TYPES[0], duration: '' });
+  const [customWaterMl, setCustomWaterMl] = useState('');
+  const [waterExpanded, setWaterExpanded] = useState(false);
+  const [editingStockId, setEditingStockId] = useState(null);
+  const [editingStockValue, setEditingStockValue] = useState('');
 
   const [pantrySearch, setPantrySearch] = useState('');
   const [selectedPantryItem, setSelectedPantryItem] = useState(null);
@@ -623,7 +659,12 @@ function App() {
   }
 
   function addWater(ml) {
-    updateToday((day) => ({ ...day, waterMl: (day.waterMl || 0) + ml }));
+    if (!ml || ml <= 0) return;
+    updateToday((day) => ({ ...day, waterLog: [...(day.waterLog || []), { ts: Date.now(), ml }] }));
+  }
+
+  function removeWater(ts) {
+    updateToday((day) => ({ ...day, waterLog: (day.waterLog || []).filter((w) => w.ts !== ts) }));
   }
 
   function saveExercise() {
@@ -633,6 +674,14 @@ function App() {
 
   function clearExercise() {
     updateToday((day) => ({ ...day, exercise: { done: false, type: '', duration: '' } }));
+  }
+
+  function resetAllData() {
+    if (!window.confirm('Isso vai apagar TODOS os dados salvos (refeições, água, despensa, peso, metas). Não pode ser desfeito. Continuar?')) return;
+    for (const key of ['settings', 'logs', 'weights', 'pantry']) {
+      localStorage.removeItem(STORAGE_PREFIX + key);
+    }
+    window.location.reload();
   }
 
   function saveSettingsForm() {
@@ -670,6 +719,36 @@ function App() {
     setFreeProt('');
   }
 
+  function undoPurchase(purchase) {
+    const nextStock = { ...pantry.stock, [purchase.itemId]: Math.max(0, (pantry.stock[purchase.itemId] || 0) - purchase.grams) };
+    const nextPurchases = pantry.recentPurchases.filter((p) => p.ts !== purchase.ts);
+    const nextUnitSizes = { ...pantry.unitSizes };
+    const nextWarned = { ...pantry.warned };
+    const stillHasPurchase = nextPurchases.some((p) => p.itemId === purchase.itemId);
+    if (!stillHasPurchase && nextStock[purchase.itemId] <= 0) {
+      delete nextUnitSizes[purchase.itemId];
+      delete nextWarned[purchase.itemId];
+    }
+    const next = { stock: nextStock, warned: nextWarned, recentPurchases: nextPurchases, unitSizes: nextUnitSizes };
+    setPantry(next);
+    saveJSON('pantry', next);
+    setToast(`Compra de ${purchase.name} desfeita`);
+  }
+
+  function setStockDirectly(itemId, newDisplayAmount) {
+    const item = PANTRY_ITEMS.find((p) => p.id === itemId);
+    if (!item) return;
+    const gpu = pantry.unitSizes[itemId] || item.gramsPerUnit;
+    const grams = Math.max(0, Number(newDisplayAmount)) * gpu;
+    const nextStock = { ...pantry.stock, [itemId]: grams };
+    const nextWarned = { ...pantry.warned };
+    if (grams > item.threshold) nextWarned[itemId] = false;
+    const next = { ...pantry, stock: nextStock, warned: nextWarned };
+    setPantry(next);
+    saveJSON('pantry', next);
+    setToast(`${item.name} corrigido`);
+  }
+
   function addPantryPurchase() {
     if (!selectedPantryItem || !pantryAmount || Number(pantryAmount) <= 0) return;
     const unitSize = Number(pantryUnitSize) > 0 ? Number(pantryUnitSize) : selectedPantryItem.gramsPerUnit;
@@ -679,7 +758,7 @@ function App() {
     if (nextStock[selectedPantryItem.id] > selectedPantryItem.threshold) nextWarned[selectedPantryItem.id] = false;
     const nextUnitSizes = { ...pantry.unitSizes, [selectedPantryItem.id]: unitSize };
     const nextPurchases = [
-      { ts: Date.now(), name: selectedPantryItem.name, amount: pantryAmount, unit: selectedPantryItem.unit },
+      { ts: Date.now(), itemId: selectedPantryItem.id, name: selectedPantryItem.name, amount: pantryAmount, unit: selectedPantryItem.unit, grams },
       ...pantry.recentPurchases,
     ].slice(0, 8);
     const next = { stock: nextStock, warned: nextWarned, recentPurchases: nextPurchases, unitSizes: nextUnitSizes };
@@ -694,6 +773,7 @@ function App() {
 
   const totalKcal = today.meals.reduce((s, m) => s + m.kcal, 0);
   const totalProt = today.meals.reduce((s, m) => s + m.prot, 0);
+  const totalWaterMl = (today.waterLog || []).reduce((s, w) => s + w.ml, 0);
   const treatLoggedToday = today.meals.some((m) => m.mealType === 'doce');
   const over = totalKcal - settings.kcalGoal;
 
@@ -720,9 +800,13 @@ function App() {
     return PANTRY_ITEMS.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
   }, [pantrySearch]);
 
+  const emptyStockItems = useMemo(
+    () => PANTRY_ITEMS.filter((p) => pantry.unitSizes[p.id] !== undefined && (pantry.stock[p.id] ?? 0) <= 0),
+    [pantry.stock, pantry.unitSizes]
+  );
   const lowStockItems = useMemo(
-    () => PANTRY_ITEMS.filter((p) => (pantry.stock[p.id] ?? 0) > 0 && (pantry.stock[p.id] ?? 0) <= p.threshold),
-    [pantry.stock]
+    () => PANTRY_ITEMS.filter((p) => pantry.unitSizes[p.id] !== undefined && (pantry.stock[p.id] ?? 0) > 0 && (pantry.stock[p.id] ?? 0) <= p.threshold),
+    [pantry.stock, pantry.unitSizes]
   );
 
   if (loading) {
@@ -794,56 +878,79 @@ function App() {
                 </div>
               )}
 
-              {lowStockItems.length > 0 && (
-                <button
-                  onClick={() => setTab('despensa')}
-                  style={{
-                    ...cardStyle({ background: 'rgba(226,169,59,0.1)', border: `1px solid ${PALETTE.honey}`, textAlign: 'left', cursor: 'pointer' }),
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    width: '100%',
-                  }}
-                >
-                  <AlertTriangle size={18} color={PALETTE.honey} style={{ flexShrink: 0 }} />
-                  <div style={{ fontSize: 13 }}>
-                    <strong>{lowStockItems.length} {lowStockItems.length === 1 ? 'item acabando' : 'itens acabando'}</strong> na despensa:{' '}
-                    {lowStockItems.map((i) => i.name).join(', ')}
-                  </div>
-                </button>
-              )}
-
               <div style={{ display: 'flex', gap: 12 }}>
                 <StatBar icon={<Flame size={15} />} label="Proteína" value={Math.round(totalProt)} goal={settings.proteinGoal} unit="g" color={PALETTE.honey} />
                 <StatBar
                   icon={<Droplet size={15} />}
                   label="Água"
-                  value={(today.waterMl || 0) / 1000}
+                  value={totalWaterMl / 1000}
                   goal={settings.waterGoalMl / 1000}
                   unit="L"
                   color={PALETTE.teal}
                   extra={
-                    <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                      {[200, 300, 500].map((ml) => (
-                        <button
-                          key={ml}
-                          onClick={() => addWater(ml)}
-                          style={{
-                            flex: 1,
-                            padding: '6px 0',
-                            borderRadius: 8,
-                            border: `1px solid ${PALETTE.border}`,
-                            background: 'transparent',
-                            color: PALETTE.teal,
-                            fontFamily: FONT_MONO,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          +{ml}
-                        </button>
-                      ))}
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {[200, 300, 500].map((ml) => (
+                          <button
+                            key={ml}
+                            onClick={() => addWater(ml)}
+                            style={{
+                              flex: 1,
+                              padding: '6px 0',
+                              borderRadius: 8,
+                              border: `1px solid ${PALETTE.border}`,
+                              background: 'transparent',
+                              color: PALETTE.teal,
+                              fontFamily: FONT_MONO,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            +{ml}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setWaterExpanded(!waterExpanded)}
+                        style={{ background: 'none', border: 'none', color: PALETTE.textMuted, fontSize: 10.5, marginTop: 8, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                      >
+                        {waterExpanded ? 'ocultar' : 'outro valor / corrigir'}
+                      </button>
+                      {waterExpanded && (
+                        <div style={{ marginTop: 8 }}>
+                          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                            <input
+                              type="number"
+                              value={customWaterMl}
+                              onChange={(e) => setCustomWaterMl(e.target.value)}
+                              placeholder="ml"
+                              style={{ width: 0, flex: 1, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 8, color: PALETTE.text, padding: '6px 8px', fontSize: 12 }}
+                            />
+                            <button
+                              onClick={() => { addWater(Number(customWaterMl)); setCustomWaterMl(''); }}
+                              disabled={!customWaterMl || Number(customWaterMl) <= 0}
+                              style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: PALETTE.teal, color: '#1B1815', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
+                            >
+                              add
+                            </button>
+                          </div>
+                          {(today.waterLog || []).length === 0 ? (
+                            <div style={{ fontSize: 11, color: PALETTE.textMuted }}>Nada registrado ainda hoje.</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {(today.waterLog || []).slice().reverse().map((w) => (
+                                <div key={w.ts} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11.5 }}>
+                                  <span style={{ color: PALETTE.text }}>{w.ml} ml</span>
+                                  <button onClick={() => removeWater(w.ts)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer', padding: 2 }}>
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   }
                 />
@@ -938,6 +1045,9 @@ function App() {
                   </div>
                 )}
               </div>
+
+              <StockAlertBanner items={emptyStockItems} level="empty" onClick={() => setTab('despensa')} />
+              <StockAlertBanner items={lowStockItems} level="low" onClick={() => setTab('despensa')} />
             </div>
           )}
 
@@ -1152,6 +1262,23 @@ function App() {
 
           {tab === 'despensa' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {emptyStockItems.length > 0 && (
+                <div style={cardStyle({ background: 'rgba(194,84,46,0.14)', border: `1px solid ${PALETTE.paprika}` })}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <AlertTriangle size={16} color={PALETTE.paprika} />
+                    <span style={{ fontWeight: 800, fontSize: 13.5, color: PALETTE.paprika }}>Acabou</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {emptyStockItems.map((i) => (
+                      <div key={i.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{i.name}</span>
+                        <span style={{ fontFamily: FONT_MONO, color: PALETTE.paprika }}>{formatStock(i, pantry.stock[i.id] || 0, pantry.unitSizes[i.id])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {lowStockItems.length > 0 && (
                 <div style={cardStyle({ background: 'rgba(226,169,59,0.1)', border: `1px solid ${PALETTE.honey}` })}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -1240,29 +1367,64 @@ function App() {
                 )}
               </div>
 
-              {PANTRY_CATEGORIES.map((cat) => {
+              {PANTRY_CATEGORIES.map((cat, idx) => {
                 const items = PANTRY_ITEMS.filter((p) => p.cat === cat);
                 return (
                   <div key={cat} style={cardStyle()}>
-                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 10 }}>{cat}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 4 }}>{cat}</div>
+                    {idx === 0 && <div style={{ fontSize: 11, color: PALETTE.textMuted, marginBottom: 8 }}>Toque no valor de qualquer item pra corrigir direto.</div>}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {items.map((p) => {
                         const stock = pantry.stock[p.id] || 0;
-                        const low = stock > 0 && stock <= p.threshold;
+                        const gpu = pantry.unitSizes[p.id] || p.gramsPerUnit;
+                        const tracked = pantry.unitSizes[p.id] !== undefined;
+                        const isEmptyFlag = tracked && stock <= 0;
+                        const isLowFlag = tracked && stock > 0 && stock <= p.threshold;
                         const empty = stock <= 0;
+                        const isEditing = editingStockId === p.id;
                         return (
-                          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: 13, color: empty ? PALETTE.textMuted : PALETTE.text }}>{p.name}</span>
-                            <span
-                              style={{
-                                fontFamily: FONT_MONO,
-                                fontSize: 12,
-                                fontWeight: low ? 700 : 400,
-                                color: low ? PALETTE.paprika : empty ? PALETTE.textMuted : PALETTE.text,
-                              }}
-                            >
-                              {formatStock(p, stock, pantry.unitSizes[p.id])}
-                            </span>
+                            {isEditing ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                <input
+                                  type="number"
+                                  autoFocus
+                                  value={editingStockValue}
+                                  onChange={(e) => setEditingStockValue(e.target.value)}
+                                  style={{ width: 56, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.honey}`, borderRadius: 6, color: PALETTE.text, padding: '3px 6px', fontSize: 12, fontFamily: FONT_MONO }}
+                                />
+                                <span style={{ fontSize: 11, color: PALETTE.textMuted }}>{p.unit}</span>
+                                <button
+                                  onClick={() => { setStockDirectly(p.id, editingStockValue); setEditingStockId(null); }}
+                                  style={{ background: 'none', border: 'none', color: PALETTE.sage, cursor: 'pointer', padding: 2, fontWeight: 800, fontSize: 14 }}
+                                >
+                                  ✓
+                                </button>
+                                <button onClick={() => setEditingStockId(null)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer', padding: 2 }}>
+                                  <X size={13} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => { setEditingStockId(p.id); setEditingStockValue(String(Math.round((stock / gpu) * 10) / 10)); }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  fontFamily: FONT_MONO,
+                                  fontSize: 12,
+                                  fontWeight: isEmptyFlag || isLowFlag ? 700 : 400,
+                                  color: isEmptyFlag ? PALETTE.paprika : isLowFlag ? PALETTE.honey : empty ? PALETTE.textMuted : PALETTE.text,
+                                  textDecoration: 'underline',
+                                  textDecorationStyle: 'dotted',
+                                  textUnderlineOffset: '3px',
+                                }}
+                              >
+                                {formatStock(p, stock, gpu)}
+                              </button>
+                            )}
                           </div>
                         );
                       })}
@@ -1273,14 +1435,18 @@ function App() {
 
               {pantry.recentPurchases.length > 0 && (
                 <div style={cardStyle()}>
-                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 4 }}>
                     Últimas compras
                   </div>
+                  <div style={{ fontSize: 11, color: PALETTE.textMuted, marginBottom: 10 }}>Errou a quantidade? Toque no X pra desfazer.</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {pantry.recentPurchases.map((pu) => (
-                      <div key={pu.ts} style={{ fontSize: 12.5, color: PALETTE.textMuted, display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{pu.name}</span>
+                      <div key={pu.ts} style={{ fontSize: 12.5, color: PALETTE.textMuted, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <span style={{ flex: 1 }}>{pu.name}</span>
                         <span style={{ fontFamily: FONT_MONO }}>+{pu.amount} {pu.unit}</span>
+                        <button onClick={() => undoPurchase(pu)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer', padding: 2, flexShrink: 0 }}>
+                          <X size={13} />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -1371,6 +1537,22 @@ function App() {
                   </div>
                 )}
               </div>
+
+              <button
+                onClick={resetAllData}
+                style={{
+                  background: 'none',
+                  border: `1px solid ${PALETTE.border}`,
+                  borderRadius: 14,
+                  color: PALETTE.textMuted,
+                  fontSize: 12.5,
+                  padding: '10px 14px',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                Zerar todos os dados e recomeçar
+              </button>
             </div>
           )}
         </div>
@@ -1413,7 +1595,7 @@ function App() {
             >
               <Icon size={18} />
               <span style={{ fontSize: 10, fontWeight: 700 }}>{label}</span>
-              {id === 'despensa' && lowStockItems.length > 0 && (
+              {id === 'despensa' && (emptyStockItems.length > 0 || lowStockItems.length > 0) && (
                 <span
                   style={{
                     position: 'absolute',
