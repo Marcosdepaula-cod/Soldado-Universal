@@ -605,6 +605,7 @@ function App() {
   const [editingStockId, setEditingStockId] = useState(null);
   const [historyDate, setHistoryDate] = useState(null);
   const [editingStockValue, setEditingStockValue] = useState('');
+  const [editingStockWeight, setEditingStockWeight] = useState('');
 
   const [pantrySearch, setPantrySearch] = useState('');
   const [selectedPantryItem, setSelectedPantryItem] = useState(null);
@@ -633,6 +634,23 @@ function App() {
       return () => clearTimeout(t);
     }
   }, [toast]);
+
+  useEffect(() => {
+    if (freeIngredients.length > 0) {
+      let kcalSum = 0;
+      let protSum = 0;
+      freeIngredients.forEach((ing) => {
+        const food = FOODS.find((f) => f.id === ing.id);
+        if (food) {
+          kcalSum += (food.kcal100 / 100) * ing.grams;
+          protSum += (food.prot100 / 100) * ing.grams;
+        }
+      });
+      setFreeKcal(String(Math.round(kcalSum)));
+      setFreeProt(String(Math.round(protSum * 10) / 10));
+      setFreeDescription((prev) => (prev.trim() ? prev : freeIngredients.map((i) => `${i.name} ${i.display}`).join(', ')));
+    }
+  }, [freeIngredients]);
 
   const updateToday = useCallback(
     (updater) => {
@@ -786,15 +804,16 @@ function App() {
     setToast(`Compra de ${purchase.name} desfeita`);
   }
 
-  function setStockDirectly(itemId, newDisplayAmount) {
+  function setStockDirectly(itemId, newDisplayAmount, newWeight) {
     const item = PANTRY_ITEMS.find((p) => p.id === itemId);
     if (!item) return;
-    const gpu = pantry.unitSizes[itemId] || item.gramsPerUnit;
+    const gpu = Number(newWeight) > 0 ? Number(newWeight) : pantry.unitSizes[itemId] || item.gramsPerUnit;
     const grams = Math.max(0, Number(newDisplayAmount)) * gpu;
     const nextStock = { ...pantry.stock, [itemId]: grams };
     const nextWarned = { ...pantry.warned };
+    const nextUnitSizes = { ...pantry.unitSizes, [itemId]: gpu };
     if (grams > item.threshold) nextWarned[itemId] = false;
-    const next = { ...pantry, stock: nextStock, warned: nextWarned };
+    const next = { ...pantry, stock: nextStock, warned: nextWarned, unitSizes: nextUnitSizes };
     setPantry(next);
     saveJSON('pantry', next);
     setToast(`${item.name} corrigido`);
@@ -1661,47 +1680,68 @@ function App() {
                         const empty = stock <= 0;
                         const isEditing = editingStockId === p.id;
                         return (
-                          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 13, color: empty ? PALETTE.textMuted : PALETTE.text }}>{p.name}</span>
-                            {isEditing ? (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                                <input
-                                  type="number"
-                                  autoFocus
-                                  value={editingStockValue}
-                                  onChange={(e) => setEditingStockValue(e.target.value)}
-                                  style={{ width: 56, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.honey}`, borderRadius: 6, color: PALETTE.text, padding: '3px 6px', fontSize: 12, fontFamily: FONT_MONO }}
-                                />
-                                <span style={{ fontSize: 11, color: PALETTE.textMuted }}>{p.unit}</span>
+                          <div key={p.id} style={isEditing ? { padding: '8px 0', borderTop: `1px solid ${PALETTE.border}` } : {}}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 13, color: empty ? PALETTE.textMuted : PALETTE.text }}>{p.name}</span>
+                              {!isEditing && (
                                 <button
-                                  onClick={() => { setStockDirectly(p.id, editingStockValue); setEditingStockId(null); }}
-                                  style={{ background: 'none', border: 'none', color: PALETTE.sage, cursor: 'pointer', padding: 2, fontWeight: 800, fontSize: 14 }}
+                                  onClick={() => {
+                                    setEditingStockId(p.id);
+                                    setEditingStockValue(String(Math.round((stock / gpu) * 10) / 10));
+                                    setEditingStockWeight(String(gpu));
+                                  }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    fontFamily: FONT_MONO,
+                                    fontSize: 12,
+                                    fontWeight: isEmptyFlag || isLowFlag ? 700 : 400,
+                                    color: isEmptyFlag ? PALETTE.paprika : isLowFlag ? PALETTE.honey : empty ? PALETTE.textMuted : PALETTE.text,
+                                    textDecoration: 'underline',
+                                    textDecorationStyle: 'dotted',
+                                    textUnderlineOffset: '3px',
+                                  }}
+                                >
+                                  {formatStock(p, stock, gpu)}
+                                </button>
+                              )}
+                            </div>
+                            {isEditing && (
+                              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginTop: 8 }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 10, color: PALETTE.textMuted, marginBottom: 2 }}>quantidade ({p.unit})</div>
+                                  <input
+                                    type="number"
+                                    autoFocus
+                                    value={editingStockValue}
+                                    onChange={(e) => setEditingStockValue(e.target.value)}
+                                    style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.honey}`, borderRadius: 6, color: PALETTE.text, padding: '5px 8px', fontSize: 12, fontFamily: FONT_MONO }}
+                                  />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 10, color: PALETTE.textMuted, marginBottom: 2 }}>peso por {p.unit} (g)</div>
+                                  <input
+                                    type="number"
+                                    value={editingStockWeight}
+                                    onChange={(e) => setEditingStockWeight(e.target.value)}
+                                    style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.honey}`, borderRadius: 6, color: PALETTE.text, padding: '5px 8px', fontSize: 12, fontFamily: FONT_MONO }}
+                                  />
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setStockDirectly(p.id, editingStockValue, editingStockWeight);
+                                    setEditingStockId(null);
+                                  }}
+                                  style={{ background: 'none', border: 'none', color: PALETTE.sage, cursor: 'pointer', padding: '5px 4px', fontWeight: 800, fontSize: 16 }}
                                 >
                                   ✓
                                 </button>
-                                <button onClick={() => setEditingStockId(null)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer', padding: 2 }}>
-                                  <X size={13} />
+                                <button onClick={() => setEditingStockId(null)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer', padding: '5px 4px' }}>
+                                  <X size={14} />
                                 </button>
                               </div>
-                            ) : (
-                              <button
-                                onClick={() => { setEditingStockId(p.id); setEditingStockValue(String(Math.round((stock / gpu) * 10) / 10)); }}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: 0,
-                                  fontFamily: FONT_MONO,
-                                  fontSize: 12,
-                                  fontWeight: isEmptyFlag || isLowFlag ? 700 : 400,
-                                  color: isEmptyFlag ? PALETTE.paprika : isLowFlag ? PALETTE.honey : empty ? PALETTE.textMuted : PALETTE.text,
-                                  textDecoration: 'underline',
-                                  textDecorationStyle: 'dotted',
-                                  textUnderlineOffset: '3px',
-                                }}
-                              >
-                                {formatStock(p, stock, gpu)}
-                              </button>
                             )}
                           </div>
                         );
