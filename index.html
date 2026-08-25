@@ -158,6 +158,12 @@ const FOODS = [
 
 const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const WORKOUT_TYPES = ['Musculação', 'Cardio', 'Funcional', 'Outro'];
+// Valores MET (equivalente metabólico) aproximados por tipo de treino — estimativa, não medição real.
+const MET_VALUES = { Musculação: 5, Cardio: 7, Funcional: 6.5, Outro: 5 };
+function estimateCaloriesBurned(type, minutes, weightKg) {
+  const met = MET_VALUES[type] || 5;
+  return Math.round(met * weightKg * (Number(minutes || 0) / 60));
+}
 
 /* ============================== PANTRY (DESPENSA) ============================== */
 const PANTRY_CATEGORIES = ['Açougue e Peixaria', 'Hortifruti', 'Padaria', 'Frios e Laticínios', 'Mercearia', 'Doces'];
@@ -201,6 +207,8 @@ const PANTRY_ITEMS = [
 ];
 
 const FRUIT_IDS = ['banana', 'uva', 'morango', 'maca', 'mamao', 'melancia'];
+// Itens da despensa que fazem sentido registrar "quantas unidades comi", não só gramas.
+const UNIT_CONSUMABLE_IDS = new Set(['iogurte', 'ovo', 'pimentao', 'berinjela', 'chuchu', 'abobrinha', 'banana', 'maca', 'mamao', 'melancia']);
 
 // Ingredient breakdown per diet preset, used to auto-decrement pantry stock when a preset is logged.
 // { id, g } = fixed ingredient. { fruit: g } = generic fruit slot (resolved to whichever tracked fruit has the lowest stock).
@@ -579,6 +587,14 @@ function App() {
   const [search, setSearch] = useState('');
   const [selectedFood, setSelectedFood] = useState(null);
   const [amount, setAmount] = useState('');
+  const [unitQty, setUnitQty] = useState('');
+  const [unitWeight, setUnitWeight] = useState('');
+
+  const [freeIngredients, setFreeIngredients] = useState([]);
+  const [freeIngSearch, setFreeIngSearch] = useState('');
+  const [freeIngSelected, setFreeIngSelected] = useState(null);
+  const [freeIngQty, setFreeIngQty] = useState('');
+  const [freeIngWeight, setFreeIngWeight] = useState('');
   const [weightInput, setWeightInput] = useState('');
   const [settingsForm, setSettingsForm] = useState(null);
   const [exerciseForm, setExerciseForm] = useState({ type: WORKOUT_TYPES[0], duration: '' });
@@ -706,6 +722,27 @@ function App() {
     setToast('Peso registrado');
   }
 
+  function addFreeIngredient() {
+    if (!freeIngSelected || !freeIngEffectiveGrams || freeIngEffectiveGrams <= 0) return;
+    if (freeIngIsUnitBased && Number(freeIngWeight) > 0) {
+      const nextUnitSizes = { ...pantry.unitSizes, [freeIngSelected.id]: Number(freeIngWeight) };
+      const nextPantry = { ...pantry, unitSizes: nextUnitSizes };
+      setPantry(nextPantry);
+      saveJSON('pantry', nextPantry);
+    }
+    setFreeIngredients([
+      ...freeIngredients,
+      { id: freeIngSelected.id, name: freeIngSelected.name, grams: freeIngEffectiveGrams, display: freeIngIsUnitBased ? `${freeIngQty}un` : `${freeIngQty}g` },
+    ]);
+    setFreeIngSelected(null);
+    setFreeIngSearch('');
+    setFreeIngQty('');
+    setFreeIngWeight('');
+  }
+  function removeFreeIngredient(idx) {
+    setFreeIngredients(freeIngredients.filter((_, i) => i !== idx));
+  }
+
   function addFreeEntry() {
     if (!freeDescription.trim() || !freeKcal) return;
     addMealEntry({
@@ -714,9 +751,20 @@ function App() {
       kcal: Math.round(Number(freeKcal)),
       prot: Number(freeProt) || 0,
     });
+    if (freeIngredients.length > 0) {
+      const decrements = freeIngredients.map((i) => ({ id: i.id, grams: i.grams }));
+      const { stock, warned, newlyLow } = applyDecrements(pantry, decrements);
+      const nextPantry = { ...pantry, stock, warned };
+      setPantry(nextPantry);
+      saveJSON('pantry', nextPantry);
+      if (newlyLow.length > 0) {
+        setTimeout(() => setToast(`Descontado da despensa · acabando: ${newlyLow.join(', ')}`), 50);
+      }
+    }
     setFreeDescription('');
     setFreeKcal('');
     setFreeProt('');
+    setFreeIngredients([]);
   }
 
   function undoPurchase(purchase) {
@@ -777,10 +825,29 @@ function App() {
   const treatLoggedToday = today.meals.some((m) => m.mealType === 'doce');
   const over = totalKcal - settings.kcalGoal;
 
+  const latestWeightKg = useMemo(() => {
+    if (!weights.length) return 80;
+    const sorted = [...weights].sort((a, b) => (a.date < b.date ? -1 : 1));
+    return sorted[sorted.length - 1].kg;
+  }, [weights]);
+
   const week = getLastNDates(7).map((d) => {
     const day = logs[d] || emptyDay();
-    return { date: d, kcal: day.meals.reduce((s, m) => s + m.kcal, 0) };
+    const ex = day.exercise || {};
+    return {
+      date: d,
+      kcal: day.meals.reduce((s, m) => s + m.kcal, 0),
+      prot: day.meals.reduce((s, m) => s + m.prot, 0),
+      kcalBurned: ex.done ? estimateCaloriesBurned(ex.type, ex.duration, latestWeightKg) : 0,
+    };
   });
+  const weekTotalKcal = week.reduce((s, d) => s + d.kcal, 0);
+  const weekTotalProt = week.reduce((s, d) => s + d.prot, 0);
+  const weekTotalBurned = week.reduce((s, d) => s + d.kcalBurned, 0);
+  const weekGoalKcal = settings.kcalGoal * 7;
+  const weekGoalProt = settings.proteinGoal * 7;
+  const weekOverKcal = weekTotalKcal - weekGoalKcal;
+  const weekOverProt = weekTotalProt - weekGoalProt;
 
   const presetKey = PRESET_MAP[mealType];
   const presets = presetKey ? DIET[presetKey] : [];
@@ -791,8 +858,18 @@ function App() {
     return FOODS.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
   }, [search]);
 
-  const previewKcal = selectedFood && amount ? Math.round((selectedFood.kcal100 / 100) * Number(amount)) : 0;
-  const previewProt = selectedFood && amount ? Math.round((selectedFood.prot100 / 100) * Number(amount) * 10) / 10 : 0;
+  const isUnitBased = selectedFood && UNIT_CONSUMABLE_IDS.has(selectedFood.id);
+  const effectiveGrams = isUnitBased ? (Number(unitQty) || 0) * (Number(unitWeight) || 0) : Number(amount) || 0;
+  const previewKcal = selectedFood && effectiveGrams ? Math.round((selectedFood.kcal100 / 100) * effectiveGrams) : 0;
+  const previewProt = selectedFood && effectiveGrams ? Math.round((selectedFood.prot100 / 100) * effectiveGrams * 10) / 10 : 0;
+
+  const filteredFreeIng = useMemo(() => {
+    if (!freeIngSearch.trim()) return [];
+    const q = freeIngSearch.trim().toLowerCase();
+    return PANTRY_ITEMS.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [freeIngSearch]);
+  const freeIngIsUnitBased = freeIngSelected && UNIT_CONSUMABLE_IDS.has(freeIngSelected.id);
+  const freeIngEffectiveGrams = freeIngIsUnitBased ? (Number(freeIngQty) || 0) * (Number(freeIngWeight) || 0) : Number(freeIngQty) || 0;
 
   const filteredPantryItems = useMemo(() => {
     if (!pantrySearch.trim()) return [];
@@ -988,14 +1065,22 @@ function App() {
                   })}
                 </div>
                 {today.exercise?.done ? (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: 13 }}>
-                      Hoje: <strong>{today.exercise.type}</strong>
-                      {today.exercise.duration ? ` · ${today.exercise.duration}min` : ''}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: 13 }}>
+                        Hoje: <strong>{today.exercise.type}</strong>
+                        {today.exercise.duration ? ` · ${today.exercise.duration}min` : ''}
+                      </div>
+                      <button onClick={clearExercise} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
+                        desmarcar
+                      </button>
                     </div>
-                    <button onClick={clearExercise} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
-                      desmarcar
-                    </button>
+                    {today.exercise.duration && (
+                      <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginTop: 6 }}>
+                        ~{estimateCaloriesBurned(today.exercise.type, today.exercise.duration, latestWeightKg)} kcal gastas (estimativa
+                        {weights.length === 0 ? ', baseada em 80kg — registre seu peso em Progresso pra afinar' : ` pro seu peso de ${latestWeightKg}kg`})
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -1136,7 +1221,15 @@ function App() {
                     {filteredFoods.map((f) => (
                       <button
                         key={f.id}
-                        onClick={() => { setSelectedFood(f); setAmount(String(f.portion)); }}
+                        onClick={() => {
+                          setSelectedFood(f);
+                          setAmount(String(f.portion));
+                          if (UNIT_CONSUMABLE_IDS.has(f.id)) {
+                            const pantryItem = PANTRY_ITEMS.find((p) => p.id === f.id);
+                            setUnitQty('1');
+                            setUnitWeight(String(pantry.unitSizes[f.id] || (pantryItem ? pantryItem.gramsPerUnit : f.portion)));
+                          }
+                        }}
                         style={{ ...cardStyle({ textAlign: 'left' }), border: `1px solid ${PALETTE.border}`, cursor: 'pointer', padding: '10px 14px' }}
                       >
                         <div style={{ fontSize: 13.5 }}>{f.name}</div>
@@ -1154,30 +1247,59 @@ function App() {
                         <X size={16} />
                       </button>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                      <input
-                        type="number"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        style={{ width: 90, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 10px', fontSize: 14 }}
-                      />
-                      <span style={{ fontSize: 13, color: PALETTE.textMuted }}>{selectedFood.unit}</span>
-                      <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.honey, marginLeft: 'auto' }}>
-                        {previewKcal} kcal · {previewProt}g prot
-                      </span>
+                    {isUnitBased ? (
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, color: PALETTE.textMuted, marginBottom: 3 }}>quantidade (un)</div>
+                          <input
+                            type="number"
+                            value={unitQty}
+                            onChange={(e) => setUnitQty(e.target.value)}
+                            style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 10px', fontSize: 14 }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, color: PALETTE.textMuted, marginBottom: 3 }}>peso por un (g)</div>
+                          <input
+                            type="number"
+                            value={unitWeight}
+                            onChange={(e) => setUnitWeight(e.target.value)}
+                            style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 10px', fontSize: 14 }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                        <input
+                          type="number"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          style={{ width: 90, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '9px 10px', fontSize: 14 }}
+                        />
+                        <span style={{ fontSize: 13, color: PALETTE.textMuted }}>{selectedFood.unit}</span>
+                      </div>
+                    )}
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.honey, marginBottom: 10, textAlign: 'right' }}>
+                      {previewKcal} kcal · {previewProt}g prot
                     </div>
                     <PrimaryButton
-                      onClick={() =>
+                      onClick={() => {
+                        if (isUnitBased && Number(unitWeight) > 0) {
+                          const nextUnitSizes = { ...pantry.unitSizes, [selectedFood.id]: Number(unitWeight) };
+                          const nextPantry = { ...pantry, unitSizes: nextUnitSizes };
+                          setPantry(nextPantry);
+                          saveJSON('pantry', nextPantry);
+                        }
                         addMealEntry({
                           mealType,
                           foodId: selectedFood.id,
-                          grams: Number(amount),
-                          name: `${selectedFood.name} (${amount}${selectedFood.unit})`,
+                          grams: effectiveGrams,
+                          name: isUnitBased ? `${selectedFood.name} (${unitQty}un)` : `${selectedFood.name} (${amount}${selectedFood.unit})`,
                           kcal: previewKcal,
                           prot: previewProt,
-                        })
-                      }
-                      disabled={!amount || Number(amount) <= 0}
+                        });
+                      }}
+                      disabled={!effectiveGrams || effectiveGrams <= 0}
                     >
                       <Plus size={15} style={{ verticalAlign: -3, marginRight: 4 }} /> Adicionar
                     </PrimaryButton>
@@ -1232,6 +1354,95 @@ function App() {
                     />
                   </div>
                 </div>
+
+                <div style={{ borderTop: `1px solid ${PALETTE.border}`, paddingTop: 12, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginBottom: 8 }}>
+                    Isso usou algo da sua despensa (mesmo que diferente da receita)? Vincule aqui pra descontar certinho.
+                  </div>
+                  <div style={{ position: 'relative', marginBottom: 8 }}>
+                    <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: PALETTE.textMuted }} />
+                    <input
+                      value={freeIngSearch}
+                      onChange={(e) => { setFreeIngSearch(e.target.value); setFreeIngSelected(null); }}
+                      placeholder="ex: iogurte, aveia..."
+                      style={{ width: '100%', background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '8px 10px 8px 30px', fontSize: 13 }}
+                    />
+                  </div>
+
+                  {filteredFreeIng.length > 0 && !freeIngSelected && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8 }}>
+                      {filteredFreeIng.map((f) => (
+                        <button
+                          key={f.id}
+                          onClick={() => {
+                            setFreeIngSelected(f);
+                            if (UNIT_CONSUMABLE_IDS.has(f.id)) {
+                              setFreeIngQty('1');
+                              setFreeIngWeight(String(pantry.unitSizes[f.id] || f.gramsPerUnit));
+                            } else {
+                              setFreeIngQty(String(f.gramsPerUnit === 1 ? 100 : f.gramsPerUnit));
+                              setFreeIngWeight('');
+                            }
+                          }}
+                          style={{ background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 8, color: PALETTE.text, padding: '7px 10px', fontSize: 12.5, textAlign: 'left', cursor: 'pointer' }}
+                        >
+                          {f.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {freeIngSelected && (
+                    <div style={{ background: PALETTE.surfaceAlt, borderRadius: 10, padding: 10, marginBottom: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 700 }}>{freeIngSelected.name}</span>
+                        <button onClick={() => setFreeIngSelected(null)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer' }}>
+                          <X size={13} />
+                        </button>
+                      </div>
+                      {freeIngIsUnitBased ? (
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 10, color: PALETTE.textMuted, marginBottom: 2 }}>qtd (un)</div>
+                            <input type="number" value={freeIngQty} onChange={(e) => setFreeIngQty(e.target.value)} style={{ width: '100%', background: PALETTE.surface, border: `1px solid ${PALETTE.border}`, borderRadius: 8, color: PALETTE.text, padding: '6px 8px', fontSize: 13 }} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 10, color: PALETTE.textMuted, marginBottom: 2 }}>peso por un (g)</div>
+                            <input type="number" value={freeIngWeight} onChange={(e) => setFreeIngWeight(e.target.value)} style={{ width: '100%', background: PALETTE.surface, border: `1px solid ${PALETTE.border}`, borderRadius: 8, color: PALETTE.text, padding: '6px 8px', fontSize: 13 }} />
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ marginBottom: 8 }}>
+                          <div style={{ fontSize: 10, color: PALETTE.textMuted, marginBottom: 2 }}>gramas</div>
+                          <input type="number" value={freeIngQty} onChange={(e) => setFreeIngQty(e.target.value)} style={{ width: '100%', background: PALETTE.surface, border: `1px solid ${PALETTE.border}`, borderRadius: 8, color: PALETTE.text, padding: '6px 8px', fontSize: 13 }} />
+                        </div>
+                      )}
+                      <button
+                        onClick={addFreeIngredient}
+                        disabled={!freeIngEffectiveGrams || freeIngEffectiveGrams <= 0}
+                        style={{ width: '100%', padding: '7px 0', borderRadius: 8, border: 'none', background: PALETTE.honey, color: '#1B1815', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                      >
+                        + adicionar à lista
+                      </button>
+                    </div>
+                  )}
+
+                  {freeIngredients.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {freeIngredients.map((ing, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                          <span>
+                            {ing.name} · {ing.display}
+                          </span>
+                          <button onClick={() => removeFreeIngredient(idx)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer', padding: 2 }}>
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <PrimaryButton onClick={addFreeEntry} disabled={!freeDescription.trim() || !freeKcal}>
                   <Plus size={15} style={{ verticalAlign: -3, marginRight: 4 }} /> Adicionar
                 </PrimaryButton>
@@ -1457,6 +1668,42 @@ function App() {
 
           {tab === 'progresso' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={cardStyle()}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 12 }}>Resumo da semana</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: PALETTE.textMuted }}>Calorias</span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 13 }}>
+                        {Math.round(weekTotalKcal)} / {weekGoalKcal} kcal
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: weekOverKcal > 0 ? PALETTE.paprika : PALETTE.sage }}>
+                      {weekOverKcal > 0 ? `${Math.round(weekOverKcal)} kcal acima da meta da semana` : `${Math.round(-weekOverKcal)} kcal abaixo da meta da semana`}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: PALETTE.textMuted }}>Proteína</span>
+                      <span style={{ fontFamily: FONT_MONO, fontSize: 13 }}>
+                        {Math.round(weekTotalProt)} / {weekGoalProt}g
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: weekOverProt >= 0 ? PALETTE.sage : PALETTE.paprika }}>
+                      {weekOverProt >= 0 ? `${Math.round(weekOverProt)}g acima da meta da semana` : `${Math.round(-weekOverProt)}g abaixo da meta da semana`}
+                    </div>
+                  </div>
+                  {weekTotalBurned > 0 && (
+                    <div style={{ paddingTop: 8, borderTop: `1px solid ${PALETTE.border}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 12, color: PALETTE.textMuted }}>Estimativa gasta em treino</span>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.honey }}>~{Math.round(weekTotalBurned)} kcal</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div style={cardStyle()}>
                 <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 10 }}>Últimos 7 dias (kcal)</div>
                 <WeekBars data={week} goal={settings.kcalGoal} />
