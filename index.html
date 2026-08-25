@@ -589,6 +589,8 @@ function App() {
   const [amount, setAmount] = useState('');
   const [unitQty, setUnitQty] = useState('');
   const [unitWeight, setUnitWeight] = useState('');
+  const [foodEntryMode, setFoodEntryMode] = useState('unit');
+  const [freeIngEntryMode, setFreeIngEntryMode] = useState('unit');
 
   const [freeIngredients, setFreeIngredients] = useState([]);
   const [freeIngSearch, setFreeIngSearch] = useState('');
@@ -601,6 +603,7 @@ function App() {
   const [customWaterMl, setCustomWaterMl] = useState('');
   const [waterExpanded, setWaterExpanded] = useState(false);
   const [editingStockId, setEditingStockId] = useState(null);
+  const [historyDate, setHistoryDate] = useState(null);
   const [editingStockValue, setEditingStockValue] = useState('');
 
   const [pantrySearch, setPantrySearch] = useState('');
@@ -858,7 +861,7 @@ function App() {
     return FOODS.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
   }, [search]);
 
-  const isUnitBased = selectedFood && UNIT_CONSUMABLE_IDS.has(selectedFood.id);
+  const isUnitBased = selectedFood && UNIT_CONSUMABLE_IDS.has(selectedFood.id) && foodEntryMode === 'unit';
   const effectiveGrams = isUnitBased ? (Number(unitQty) || 0) * (Number(unitWeight) || 0) : Number(amount) || 0;
   const previewKcal = selectedFood && effectiveGrams ? Math.round((selectedFood.kcal100 / 100) * effectiveGrams) : 0;
   const previewProt = selectedFood && effectiveGrams ? Math.round((selectedFood.prot100 / 100) * effectiveGrams * 10) / 10 : 0;
@@ -868,7 +871,7 @@ function App() {
     const q = freeIngSearch.trim().toLowerCase();
     return PANTRY_ITEMS.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
   }, [freeIngSearch]);
-  const freeIngIsUnitBased = freeIngSelected && UNIT_CONSUMABLE_IDS.has(freeIngSelected.id);
+  const freeIngIsUnitBased = freeIngSelected && UNIT_CONSUMABLE_IDS.has(freeIngSelected.id) && freeIngEntryMode === 'unit';
   const freeIngEffectiveGrams = freeIngIsUnitBased ? (Number(freeIngQty) || 0) * (Number(freeIngWeight) || 0) : Number(freeIngQty) || 0;
 
   const filteredPantryItems = useMemo(() => {
@@ -1042,9 +1045,11 @@ function App() {
                   {getLastNDates(7).map((d) => {
                     const done = !!(logs[d] || {}).exercise?.done;
                     const isToday = d === dateKey;
+                    const isSelected = historyDate === d;
                     return (
-                      <div
+                      <button
                         key={d}
+                        onClick={() => setHistoryDate(isSelected ? null : d)}
                         style={{
                           flex: 1,
                           aspectRatio: '1',
@@ -1053,17 +1058,56 @@ function App() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           background: done ? PALETTE.sage : PALETTE.track,
-                          border: isToday ? `1.5px solid ${PALETTE.honey}` : 'none',
+                          border: isSelected ? `2px solid ${PALETTE.honey}` : isToday ? `1.5px solid ${PALETTE.honey}` : 'none',
                           color: done ? '#1B1815' : PALETTE.textMuted,
                           fontSize: 11,
                           fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: 0,
                         }}
                       >
                         {weekdayLabel(d)}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
+
+                {historyDate &&
+                  (() => {
+                    const hd = logs[historyDate] || emptyDay();
+                    const hdKcal = hd.meals.reduce((s, m) => s + m.kcal, 0);
+                    const hdProt = hd.meals.reduce((s, m) => s + m.prot, 0);
+                    const hdWater = (hd.waterLog || []).reduce((s, w) => s + w.ml, 0);
+                    return (
+                      <div style={{ background: PALETTE.surfaceAlt, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 700 }}>
+                            {historyDate} {historyDate === dateKey ? '(hoje)' : ''}
+                          </span>
+                          <button onClick={() => setHistoryDate(null)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer', padding: 2 }}>
+                            <X size={13} />
+                          </button>
+                        </div>
+                        <div style={{ fontSize: 12, color: PALETTE.textMuted, marginBottom: 8 }}>
+                          {Math.round(hdKcal)} kcal · {Math.round(hdProt)}g prot · {hdWater}ml água
+                          {hd.exercise?.done ? ` · treino: ${hd.exercise.type}${hd.exercise.duration ? ` (${hd.exercise.duration}min)` : ''}` : ' · sem treino'}
+                        </div>
+                        {hd.meals.length === 0 ? (
+                          <div style={{ fontSize: 12, color: PALETTE.textMuted }}>Nada registrado nesse dia.</div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            {hd.meals.map((m) => (
+                              <div key={m.ts} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                <span>{m.name}</span>
+                                <span style={{ fontFamily: FONT_MONO, color: PALETTE.textMuted }}>{m.kcal} kcal</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                 {today.exercise?.done ? (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1224,6 +1268,7 @@ function App() {
                         onClick={() => {
                           setSelectedFood(f);
                           setAmount(String(f.portion));
+                          setFoodEntryMode('unit');
                           if (UNIT_CONSUMABLE_IDS.has(f.id)) {
                             const pantryItem = PANTRY_ITEMS.find((p) => p.id === f.id);
                             setUnitQty('1');
@@ -1247,6 +1292,14 @@ function App() {
                         <X size={16} />
                       </button>
                     </div>
+                    {UNIT_CONSUMABLE_IDS.has(selectedFood.id) && (
+                      <button
+                        onClick={() => setFoodEntryMode(foodEntryMode === 'unit' ? 'grams' : 'unit')}
+                        style={{ background: 'none', border: 'none', color: PALETTE.textMuted, fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0, marginBottom: 10, display: 'block' }}
+                      >
+                        {foodEntryMode === 'unit' ? 'era um pote/pacote grande? registrar em gramas direto' : 'voltar a registrar por unidade'}
+                      </button>
+                    )}
                     {isUnitBased ? (
                       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
@@ -1376,6 +1429,7 @@ function App() {
                           key={f.id}
                           onClick={() => {
                             setFreeIngSelected(f);
+                            setFreeIngEntryMode('unit');
                             if (UNIT_CONSUMABLE_IDS.has(f.id)) {
                               setFreeIngQty('1');
                               setFreeIngWeight(String(pantry.unitSizes[f.id] || f.gramsPerUnit));
@@ -1400,6 +1454,19 @@ function App() {
                           <X size={13} />
                         </button>
                       </div>
+                      {UNIT_CONSUMABLE_IDS.has(freeIngSelected.id) && (
+                        <button
+                          onClick={() => {
+                            const next = freeIngEntryMode === 'unit' ? 'grams' : 'unit';
+                            setFreeIngEntryMode(next);
+                            if (next === 'grams') setFreeIngQty('100');
+                            else setFreeIngQty('1');
+                          }}
+                          style={{ background: 'none', border: 'none', color: PALETTE.textMuted, fontSize: 10.5, cursor: 'pointer', textDecoration: 'underline', padding: 0, marginBottom: 8, display: 'block' }}
+                        >
+                          {freeIngEntryMode === 'unit' ? 'pote/pacote grande? usar gramas direto' : 'voltar a registrar por unidade'}
+                        </button>
+                      )}
                       {freeIngIsUnitBased ? (
                         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                           <div style={{ flex: 1 }}>
