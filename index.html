@@ -814,7 +814,6 @@ function App() {
   }
 
   function setStockDirectly(itemId, newDisplayAmount, newWeight) {
-    if (String(newDisplayAmount).trim() === '') return;
     const item = PANTRY_ITEMS.find((p) => p.id === itemId);
     if (!item) return;
     const gpu = Number(newWeight) > 0 ? Number(newWeight) : pantry.unitSizes[itemId] || item.gramsPerUnit;
