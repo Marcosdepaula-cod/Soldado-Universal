@@ -284,7 +284,7 @@ function formatStock(item, stockGrams, gramsPerUnitOverride) {
 }
 
 function emptyPantry() {
-  return { stock: {}, warned: {}, recentPurchases: [], unitSizes: {} };
+  return { stock: {}, warned: {}, recentPurchases: [], unitSizes: {}, consumptionSeen: {} };
 }
 
 /* ============================== HELPERS ============================== */
@@ -624,7 +624,7 @@ function App() {
     setSettings(s);
     setLogs(l);
     setWeights(w);
-    setPantry({ stock: p.stock || {}, warned: p.warned || {}, recentPurchases: p.recentPurchases || [], unitSizes: p.unitSizes || {} });
+    setPantry({ stock: p.stock || {}, warned: p.warned || {}, recentPurchases: p.recentPurchases || [], unitSizes: p.unitSizes || {}, consumptionSeen: p.consumptionSeen || {} });
     setLoading(false);
   }, []);
 
@@ -681,7 +681,11 @@ function App() {
     if (ingredients.length > 0) {
       const decrements = computeDecrements(ingredients, pantry.stock);
       const { stock, warned, newlyLow } = applyDecrements(pantry, decrements);
-      const nextPantry = { ...pantry, stock, warned };
+      const nextConsumptionSeen = { ...pantry.consumptionSeen };
+      decrements.forEach((d) => {
+        nextConsumptionSeen[d.id] = true;
+      });
+      const nextPantry = { ...pantry, stock, warned, consumptionSeen: nextConsumptionSeen };
       setPantry(nextPantry);
       saveJSON('pantry', nextPantry);
       if (newlyLow.length > 0) {
@@ -775,7 +779,11 @@ function App() {
     if (freeIngredients.length > 0) {
       const decrements = freeIngredients.map((i) => ({ id: i.id, grams: i.grams }));
       const { stock, warned, newlyLow } = applyDecrements(pantry, decrements);
-      const nextPantry = { ...pantry, stock, warned };
+      const nextConsumptionSeen = { ...pantry.consumptionSeen };
+      decrements.forEach((d) => {
+        nextConsumptionSeen[d.id] = true;
+      });
+      const nextPantry = { ...pantry, stock, warned, consumptionSeen: nextConsumptionSeen };
       setPantry(nextPantry);
       saveJSON('pantry', nextPantry);
       if (newlyLow.length > 0) {
@@ -793,18 +801,20 @@ function App() {
     const nextPurchases = pantry.recentPurchases.filter((p) => p.ts !== purchase.ts);
     const nextUnitSizes = { ...pantry.unitSizes };
     const nextWarned = { ...pantry.warned };
+    const nextConsumptionSeen = { ...pantry.consumptionSeen, [purchase.itemId]: false };
     const stillHasPurchase = nextPurchases.some((p) => p.itemId === purchase.itemId);
     if (!stillHasPurchase && nextStock[purchase.itemId] <= 0) {
       delete nextUnitSizes[purchase.itemId];
       delete nextWarned[purchase.itemId];
     }
-    const next = { stock: nextStock, warned: nextWarned, recentPurchases: nextPurchases, unitSizes: nextUnitSizes };
+    const next = { ...pantry, stock: nextStock, warned: nextWarned, recentPurchases: nextPurchases, unitSizes: nextUnitSizes, consumptionSeen: nextConsumptionSeen };
     setPantry(next);
     saveJSON('pantry', next);
     setToast(`Compra de ${purchase.name} desfeita`);
   }
 
   function setStockDirectly(itemId, newDisplayAmount, newWeight) {
+    if (String(newDisplayAmount).trim() === '') return;
     const item = PANTRY_ITEMS.find((p) => p.id === itemId);
     if (!item) return;
     const gpu = Number(newWeight) > 0 ? Number(newWeight) : pantry.unitSizes[itemId] || item.gramsPerUnit;
@@ -812,8 +822,9 @@ function App() {
     const nextStock = { ...pantry.stock, [itemId]: grams };
     const nextWarned = { ...pantry.warned };
     const nextUnitSizes = { ...pantry.unitSizes, [itemId]: gpu };
+    const nextConsumptionSeen = { ...pantry.consumptionSeen, [itemId]: false };
     if (grams > item.threshold) nextWarned[itemId] = false;
-    const next = { ...pantry, stock: nextStock, warned: nextWarned, unitSizes: nextUnitSizes };
+    const next = { ...pantry, stock: nextStock, warned: nextWarned, unitSizes: nextUnitSizes, consumptionSeen: nextConsumptionSeen };
     setPantry(next);
     saveJSON('pantry', next);
     setToast(`${item.name} corrigido`);
@@ -831,7 +842,7 @@ function App() {
       { ts: Date.now(), itemId: selectedPantryItem.id, name: selectedPantryItem.name, amount: pantryAmount, unit: selectedPantryItem.unit, grams },
       ...pantry.recentPurchases,
     ].slice(0, 8);
-    const next = { stock: nextStock, warned: nextWarned, recentPurchases: nextPurchases, unitSizes: nextUnitSizes };
+    const next = { ...pantry, stock: nextStock, warned: nextWarned, recentPurchases: nextPurchases, unitSizes: nextUnitSizes };
     setPantry(next);
     saveJSON('pantry', next);
     setToast(`${selectedPantryItem.name} adicionado à despensa`);
@@ -900,12 +911,12 @@ function App() {
   }, [pantrySearch]);
 
   const emptyStockItems = useMemo(
-    () => PANTRY_ITEMS.filter((p) => pantry.unitSizes[p.id] !== undefined && (pantry.stock[p.id] ?? 0) <= 0),
-    [pantry.stock, pantry.unitSizes]
+    () => PANTRY_ITEMS.filter((p) => pantry.consumptionSeen[p.id] && (pantry.stock[p.id] ?? 0) <= 0),
+    [pantry.stock, pantry.consumptionSeen]
   );
   const lowStockItems = useMemo(
-    () => PANTRY_ITEMS.filter((p) => pantry.unitSizes[p.id] !== undefined && (pantry.stock[p.id] ?? 0) > 0 && (pantry.stock[p.id] ?? 0) <= p.threshold),
-    [pantry.stock, pantry.unitSizes]
+    () => PANTRY_ITEMS.filter((p) => pantry.consumptionSeen[p.id] && (pantry.stock[p.id] ?? 0) > 0 && (pantry.stock[p.id] ?? 0) <= p.threshold),
+    [pantry.stock, pantry.consumptionSeen]
   );
 
   if (loading) {
