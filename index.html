@@ -154,6 +154,33 @@ const FOODS = [
   { id: 'limonada', name: 'Limonada caseira (sem açúcar)', kcal100: 12, prot100: 0.1, unit: 'ml', portion: 300 },
   { id: 'suco_abacaxi_hortela', name: 'Suco de abacaxi c/ hortelã (caseiro)', kcal100: 20, prot100: 0.2, unit: 'ml', portion: 300 },
   { id: 'suco_melancia_caseiro', name: 'Suco de melancia (caseiro)', kcal100: 18, prot100: 0.2, unit: 'ml', portion: 300 },
+
+  // Comida de rua, lanchonete e restaurante — pra registrar refeições fora sem precisar buscar na internet.
+  // Valores por unidade/porção típica; são médias, não medição exata do lugar onde você comeu.
+  { id: 'x_tudo', name: 'X-tudo (lanche completo)', kcal100: 100, prot100: 5, unit: 'g', portion: 350, kcalFixed: 750, protFixed: 38 },
+  { id: 'x_burger', name: 'X-burger', kcal100: 100, prot100: 5, unit: 'g', portion: 200, kcalFixed: 420, protFixed: 20 },
+  { id: 'x_salada', name: 'X-salada', kcal100: 100, prot100: 5, unit: 'g', portion: 220, kcalFixed: 480, protFixed: 22 },
+  { id: 'x_bacon', name: 'X-bacon', kcal100: 100, prot100: 5, unit: 'g', portion: 250, kcalFixed: 560, protFixed: 26 },
+  { id: 'cachorro_quente', name: 'Cachorro-quente completo', kcal100: 100, prot100: 5, unit: 'g', portion: 200, kcalFixed: 380, protFixed: 13 },
+  { id: 'coxinha', name: 'Coxinha (1 unidade média)', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 220, protFixed: 7 },
+  { id: 'pastel', name: 'Pastel (1 unidade, carne ou queijo)', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 290, protFixed: 8 },
+  { id: 'pizza_fatia', name: 'Pizza (1 fatia média)', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 270, protFixed: 11 },
+  { id: 'batata_frita_lanchonete', name: 'Batata frita (porção lanchonete)', kcal100: 320, prot100: 3.5, unit: 'g', portion: 150 },
+  { id: 'esfirra', name: 'Esfirra (1 unidade)', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 160, protFixed: 6 },
+  { id: 'pao_de_queijo', name: 'Pão de queijo (1 unidade média)', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 110, protFixed: 3 },
+  { id: 'acai_tigela', name: 'Açaí na tigela (com granola/banana)', kcal100: 140, prot100: 1.3, unit: 'ml', portion: 300 },
+  { id: 'marmita_restaurante', name: 'Marmita/prato feito (restaurante popular)', kcal100: 100, prot100: 5, unit: 'g', portion: 500, kcalFixed: 780, protFixed: 32 },
+  { id: 'salgado_assado', name: 'Salgado assado genérico (1 unidade)', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 180, protFixed: 5 },
+  { id: 'milkshake', name: 'Milkshake (copo 300ml)', kcal100: 115, prot100: 2.3, unit: 'ml', portion: 300 },
+  { id: 'sorvete_bola', name: 'Sorvete (1 bola)', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 140, protFixed: 2 },
+  { id: 'kibe', name: 'Kibe frito (1 unidade)', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 150, protFixed: 7 },
+  { id: 'empada', name: 'Empada (1 unidade)', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 250, protFixed: 6 },
+  { id: 'pipoca_cinema', name: 'Pipoca (saco médio, com manteiga)', kcal100: 400, prot100: 6, unit: 'g', portion: 50 },
+  { id: 'churrasco_espetinho', name: 'Espetinho de carne', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 230, protFixed: 24 },
+  { id: 'feijoada', name: 'Feijoada (prato de restaurante)', kcal100: 100, prot100: 5, unit: 'g', portion: 500, kcalFixed: 800, protFixed: 35 },
+  { id: 'hamburguer_caseiro', name: 'Hambúrguer caseiro simples', kcal100: 100, prot100: 5, unit: 'un', portion: 1, kcalFixed: 400, protFixed: 20 },
+  { id: 'suco_caixinha_industrializado', name: 'Suco de caixinha (néctar/refresco)', kcal100: 55, prot100: 0.1, unit: 'ml', portion: 200 },
+  { id: 'salada_frutas', name: 'Salada de frutas (copo, sem calda)', kcal100: 60, prot100: 0.6, unit: 'ml', portion: 200 },
 ];
 
 const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
@@ -597,6 +624,12 @@ function App() {
   const [freeIngSelected, setFreeIngSelected] = useState(null);
   const [freeIngQty, setFreeIngQty] = useState('');
   const [freeIngWeight, setFreeIngWeight] = useState('');
+  const [offQuery, setOffQuery] = useState('');
+  const [offSearching, setOffSearching] = useState(false);
+  const [offResults, setOffResults] = useState([]);
+  const [offError, setOffError] = useState('');
+  const [offSelected, setOffSelected] = useState(null);
+  const [offGrams, setOffGrams] = useState('');
   const [weightInput, setWeightInput] = useState('');
   const [settingsForm, setSettingsForm] = useState(null);
   const [exerciseForm, setExerciseForm] = useState({ type: WORKOUT_TYPES[0], duration: '' });
@@ -768,6 +801,46 @@ function App() {
     setFreeIngredients(freeIngredients.filter((_, i) => i !== idx));
   }
 
+  async function searchOpenFoodFacts() {
+    if (!offQuery.trim()) return;
+    setOffSearching(true);
+    setOffError('');
+    setOffResults([]);
+    try {
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(offQuery)}&json=1&page_size=6`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const products = (data.products || [])
+        .map((p) => ({
+          name: p.product_name || p.generic_name || 'produto sem nome',
+          brand: p.brands || '',
+          kcal100: p.nutriments && (p.nutriments['energy-kcal_100g'] || p.nutriments['energy-kcal_serving']),
+          prot100: p.nutriments && p.nutriments['proteins_100g'],
+        }))
+        .filter((p) => p.kcal100);
+      if (products.length === 0) setOffError('Nada encontrado. Tente um nome mais simples (ex: marca + produto).');
+      setOffResults(products.slice(0, 6));
+    } catch (e) {
+      setOffError('Não consegui buscar agora. Verifique sua internet e tente de novo.');
+    } finally {
+      setOffSearching(false);
+    }
+  }
+
+  function useOffResult() {
+    if (!offSelected || !offGrams) return;
+    const grams = Number(offGrams);
+    const kcal = Math.round((offSelected.kcal100 / 100) * grams);
+    const prot = Math.round(((offSelected.prot100 || 0) / 100) * grams * 10) / 10;
+    setFreeKcal(String(kcal));
+    setFreeProt(String(prot));
+    if (!freeDescription.trim()) setFreeDescription(`${offSelected.name}${offSelected.brand ? ' - ' + offSelected.brand : ''} (${grams}g)`);
+    setOffSelected(null);
+    setOffGrams('');
+    setOffResults([]);
+    setOffQuery('');
+  }
+
   function addFreeEntry() {
     if (!freeDescription.trim() || !freeKcal) return;
     addMealEntry({
@@ -892,8 +965,18 @@ function App() {
 
   const isUnitBased = selectedFood && UNIT_CONSUMABLE_IDS.has(selectedFood.id) && foodEntryMode === 'unit';
   const effectiveGrams = isUnitBased ? (Number(unitQty) || 0) * (Number(unitWeight) || 0) : Number(amount) || 0;
-  const previewKcal = selectedFood && effectiveGrams ? Math.round((selectedFood.kcal100 / 100) * effectiveGrams) : 0;
-  const previewProt = selectedFood && effectiveGrams ? Math.round((selectedFood.prot100 / 100) * effectiveGrams * 10) / 10 : 0;
+  const previewKcal =
+    selectedFood && effectiveGrams
+      ? selectedFood.kcalFixed
+        ? Math.round(selectedFood.kcalFixed * effectiveGrams)
+        : Math.round((selectedFood.kcal100 / 100) * effectiveGrams)
+      : 0;
+  const previewProt =
+    selectedFood && effectiveGrams
+      ? selectedFood.protFixed
+        ? Math.round(selectedFood.protFixed * effectiveGrams * 10) / 10
+        : Math.round((selectedFood.prot100 / 100) * effectiveGrams * 10) / 10
+      : 0;
 
   const filteredFreeIng = useMemo(() => {
     if (!freeIngSearch.trim()) return [];
@@ -1307,7 +1390,9 @@ function App() {
                         style={{ ...cardStyle({ textAlign: 'left' }), border: `1px solid ${PALETTE.border}`, cursor: 'pointer', padding: '10px 14px' }}
                       >
                         <div style={{ fontSize: 13.5 }}>{f.name}</div>
-                        <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginTop: 2 }}>{f.kcal100} kcal / 100{f.unit}</div>
+                        <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginTop: 2 }}>
+                          {f.kcalFixed ? `${f.kcalFixed} kcal / un` : `${f.kcal100} kcal / 100${f.unit}`}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -1394,7 +1479,7 @@ function App() {
                   Comeu algo fora da dieta?
                 </div>
                 <div style={{ fontSize: 12, color: PALETTE.textMuted, marginBottom: 10, lineHeight: 1.4 }}>
-                  Prato de restaurante, comeu fora, ou algo que não está na lista. Dica: tire uma foto e pergunte as calorias no app do Claude, depois digite o resultado aqui.
+                  Prato de restaurante, comeu fora, ou algo que não está na lista. Se for um produto de marca (salgadinho, bebida, etc.), busque grátis abaixo. Se for prato feito/lanche, digite kcal e proteína direto.
                 </div>
                 <textarea
                   value={freeDescription}
@@ -1413,6 +1498,83 @@ function App() {
                     resize: 'vertical',
                   }}
                 />
+
+                <div style={{ borderBottom: `1px solid ${PALETTE.border}`, paddingBottom: 12, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginBottom: 8 }}>
+                    Produto de marca? Busque grátis (banco de dados aberto, sem conta):
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    <input
+                      value={offQuery}
+                      onChange={(e) => setOffQuery(e.target.value)}
+                      placeholder="ex: coca cola lata, biscoito trakinas"
+                      style={{ flex: 1, background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 10, color: PALETTE.text, padding: '8px 10px', fontSize: 13 }}
+                    />
+                    <button
+                      onClick={searchOpenFoodFacts}
+                      disabled={!offQuery.trim() || offSearching}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: 10,
+                        border: 'none',
+                        background: !offQuery.trim() || offSearching ? PALETTE.track : PALETTE.honey,
+                        color: !offQuery.trim() || offSearching ? PALETTE.textMuted : '#1B1815',
+                        fontWeight: 800,
+                        fontSize: 12.5,
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {offSearching ? '...' : 'Buscar'}
+                    </button>
+                  </div>
+                  {offError && <div style={{ fontSize: 11.5, color: PALETTE.paprika, marginBottom: 8 }}>{offError}</div>}
+                  {offResults.length > 0 && !offSelected && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8 }}>
+                      {offResults.map((p, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setOffSelected(p);
+                            setOffGrams('100');
+                          }}
+                          style={{ background: PALETTE.surfaceAlt, border: `1px solid ${PALETTE.border}`, borderRadius: 8, color: PALETTE.text, padding: '8px 10px', fontSize: 12, textAlign: 'left', cursor: 'pointer' }}
+                        >
+                          <div>{p.name}{p.brand ? ` · ${p.brand}` : ''}</div>
+                          <div style={{ color: PALETTE.textMuted, fontSize: 11 }}>
+                            {Math.round(p.kcal100)} kcal / 100g{p.prot100 ? ` · ${p.prot100}g prot / 100g` : ''}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {offSelected && (
+                    <div style={{ background: PALETTE.surfaceAlt, borderRadius: 10, padding: 10, marginBottom: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 700 }}>{offSelected.name}</span>
+                        <button onClick={() => setOffSelected(null)} style={{ background: 'none', border: 'none', color: PALETTE.textMuted, cursor: 'pointer' }}>
+                          <X size={13} />
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+                        <div style={{ fontSize: 11, color: PALETTE.textMuted }}>gramas comidas:</div>
+                        <input
+                          type="number"
+                          value={offGrams}
+                          onChange={(e) => setOffGrams(e.target.value)}
+                          style={{ width: 70, background: PALETTE.surface, border: `1px solid ${PALETTE.border}`, borderRadius: 8, color: PALETTE.text, padding: '6px 8px', fontSize: 13 }}
+                        />
+                      </div>
+                      <button
+                        onClick={useOffResult}
+                        disabled={!offGrams}
+                        style={{ width: '100%', padding: '7px 0', borderRadius: 8, border: 'none', background: PALETTE.honey, color: '#1B1815', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                      >
+                        usar esse valor
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <div style={{ flex: 1 }}>
