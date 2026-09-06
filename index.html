@@ -663,7 +663,7 @@ function App() {
 
   useEffect(() => {
     if (toast) {
-      const t = setTimeout(() => setToast(''), 2600);
+      const t = setTimeout(() => setToast(''), 4000);
       return () => clearTimeout(t);
     }
   }, [toast]);
@@ -799,6 +799,79 @@ function App() {
   }
   function removeFreeIngredient(idx) {
     setFreeIngredients(freeIngredients.filter((_, i) => i !== idx));
+  }
+
+  function normalizeText(s) {
+    return s
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function parseFreeText(text) {
+    const normalized = text.replace(/\s+e\s+/gi, ', ').replace(/\s+com\s+/gi, ', ');
+    const segments = normalized
+      .split(/[,;]|(?<=\))\s*/)
+      .map((s) => s.replace(/^[()]+|[()]+$/g, '').trim())
+      .filter(Boolean);
+    const matched = [];
+    const unmatched = [];
+    for (const seg of segments) {
+      const m = seg.match(/^(\d+(?:[.,]\d+)?)\s*(gramas?|g|ml|mililitros?|unidades?|un\.?)?\s*(?:de|do|da)?\s*(.+)$/i);
+      if (!m) {
+        if (seg.length > 1) unmatched.push(seg);
+        continue;
+      }
+      const qty = parseFloat(m[1].replace(',', '.'));
+      const unitHint = (m[2] || '').toLowerCase();
+      const isUnitHint = unitHint.startsWith('un');
+      const namePart = normalizeText(m[3]);
+      const food = FOODS.find((f) => {
+        const fname = normalizeText(f.name);
+        return fname.includes(namePart) || namePart.includes(fname.split(' ')[0]) || namePart.includes(fname.split('(')[0].trim());
+      });
+      if (!food) {
+        unmatched.push(seg);
+        continue;
+      }
+      let kcal, prot;
+      if (isUnitHint && food.kcalFixed) {
+        kcal = Math.round(food.kcalFixed * qty);
+        prot = Math.round((food.protFixed || 0) * qty * 10) / 10;
+      } else {
+        kcal = Math.round((food.kcal100 / 100) * qty);
+        prot = Math.round((food.prot100 / 100) * qty * 10) / 10;
+      }
+      const grams = isUnitHint ? null : qty;
+      matched.push({ id: food.id, name: food.name, qty, isUnitHint, kcal, prot, grams });
+    }
+    return { matched, unmatched };
+  }
+
+  function detectFromDescription() {
+    if (!freeDescription.trim()) return;
+    const { matched, unmatched } = parseFreeText(freeDescription);
+    if (matched.length === 0) {
+      setToast('Não reconheci nenhum item — digite kcal/proteína direto, ou use a busca de ingredientes abaixo.');
+      return;
+    }
+    const kcalSum = matched.reduce((s, m) => s + m.kcal, 0);
+    const protSum = matched.reduce((s, m) => s + m.prot, 0);
+    setFreeKcal(String(Math.round(kcalSum)));
+    setFreeProt(String(Math.round(protSum * 10) / 10));
+    const newIngredients = matched
+      .filter((m) => PANTRY_ITEMS.some((p) => p.id === m.id) && m.grams)
+      .map((m) => ({ id: m.id, name: m.name, grams: m.grams, display: `${m.qty}g` }));
+    if (newIngredients.length > 0) {
+      setFreeIngredients((prev) => [...prev, ...newIngredients]);
+    }
+    const total = matched.length + unmatched.length;
+    setToast(
+      unmatched.length > 0
+        ? `Reconheci ${matched.length} de ${total}: ${matched.map((m) => m.name.split(' ')[0]).join(', ')}. Não achei: ${unmatched.join(', ')}`
+        : `Reconheci todos: ${matched.map((m) => m.name.split(' ')[0]).join(', ')}`
+    );
   }
 
   async function searchOpenFoodFacts() {
@@ -1479,12 +1552,12 @@ function App() {
                   Comeu algo fora da dieta?
                 </div>
                 <div style={{ fontSize: 12, color: PALETTE.textMuted, marginBottom: 10, lineHeight: 1.4 }}>
-                  Prato de restaurante, comeu fora, ou algo que não está na lista. Se for um produto de marca (salgadinho, bebida, etc.), busque grátis abaixo. Se for prato feito/lanche, digite kcal e proteína direto.
+                  Descreva com quantidades (ex: "150g de aveia, 250g de iogurte, 100g de maçã") e toque em Detectar — o app calcula sozinho. Se for algo raro que não reconheça, digite kcal/proteína direto embaixo.
                 </div>
                 <textarea
                   value={freeDescription}
                   onChange={(e) => setFreeDescription(e.target.value)}
-                  placeholder="ex: X-tudo com batata frita"
+                  placeholder="ex: 150g de aveia, 250g de iogurte, 100g de maçã"
                   rows={2}
                   style={{
                     width: '100%',
@@ -1494,10 +1567,28 @@ function App() {
                     color: PALETTE.text,
                     padding: '10px 12px',
                     fontSize: 13.5,
-                    marginBottom: 12,
+                    marginBottom: 10,
                     resize: 'vertical',
                   }}
                 />
+                <button
+                  onClick={detectFromDescription}
+                  disabled={!freeDescription.trim()}
+                  style={{
+                    width: '100%',
+                    padding: '9px 0',
+                    borderRadius: 10,
+                    border: `1px solid ${PALETTE.honey}`,
+                    background: 'transparent',
+                    color: freeDescription.trim() ? PALETTE.honey : PALETTE.textMuted,
+                    fontWeight: 800,
+                    fontSize: 13,
+                    cursor: freeDescription.trim() ? 'pointer' : 'default',
+                    marginBottom: 12,
+                  }}
+                >
+                  Detectar itens e calcular
+                </button>
 
                 <div style={{ borderBottom: `1px solid ${PALETTE.border}`, paddingBottom: 12, marginBottom: 12 }}>
                   <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginBottom: 8 }}>
