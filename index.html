@@ -68,44 +68,45 @@ const FONT_MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', monospace";
 const FONT_SANS = "'Manrope', system-ui, -apple-system, sans-serif";
 
 /* ============================== DIET DATA ============================== */
+// Plano Alimentar Definitivo (v3) — 6 horários fixos de segunda a sexta.
+// Valores batem com o "Total Diário Padrão" do plano: ~1.700 kcal / ~149g proteína.
+// Pra chegar no topo da meta (160-180g), use a variante "com leite desnatado" no pré-treino
+// e/ou prefira as marmitas com mais proteína (mar2/mar4) no almoço e na janta.
 const DIET = {
   cafe: [
-    { id: 'b1s', name: 'Vitamina de banana com aveia (sem whey)', kcal: 330, prot: 10, prep: 'Bater no liquidificador: 1 banana (100g), 40g de aveia, 200ml de leite e canela a gosto.' },
-    { id: 'b1c', name: 'Vitamina de banana com aveia (com whey)', kcal: 450, prot: 34, prep: 'Bater no liquidificador: 1 banana (100g), 40g de aveia, 200ml de leite, canela a gosto e 1 scoop de whey (30g).' },
-    { id: 'b2', name: 'Ovos mexidos com pão e queijo', kcal: 475, prot: 28, prep: 'Mexer 2 ovos na frigideira pequena. Servir com 3 fatias de pão integral, 1 fatia de queijo minas (30g) e uma fruta.' },
-    { id: 'b3', name: 'Iogurte com granola e fruta', kcal: 320, prot: 11, prep: 'Misturar 200g de iogurte natural com 30g de granola e uma fruta picada.' },
-    { id: 'b4', name: 'Tapioca com frango desfiado', kcal: 370, prot: 22, prep: 'Fritar a goma de tapioca (40g) na frigideira pequena até dourar dos dois lados. Rechear com 60g de frango desfiado. Servir com uma fruta.' },
+    { id: 'cafe1', name: 'Ovos mexidos, pão integral e muçarela', kcal: 390, prot: 32, prep: '04:30/05:00, em casa. Mexer 3 ovos na frigideira pequena. Servir com 2 fatias de pão integral e 30g de queijo muçarela.' },
   ],
-  almoco_janta: [
-    { id: 'm1', name: 'M1 · Frango mel-mostarda, arroz, feijão, pimentão', kcal: 690, prot: 72, prep: 'Temperar 200g de peito de frango com mostarda, mel, páprica doce e páprica defumada. Grelhar na frigideira grande. Servir com 150g de arroz branco (panela elétrica), 100g de feijão cozido e 100g de pimentão refogado com um fio de azeite.' },
-    { id: 'm2', name: 'M2 · Carne moída, arroz, berinjela', kcal: 610, prot: 57, prep: 'Refogar 200g de carne moída magra na frigideira grande. Servir com 150g de arroz branco (panela elétrica) e 100g de berinjela refogada com azeite.' },
-    { id: 'm3', name: 'M3 · Frango desfiado mel-mostarda, batata inglesa, chuchu', kcal: 515, prot: 61, prep: 'Temperar o frango desfiado (180g) com mostarda, mel e páprica. Cozinhar. Servir com 220g de batata inglesa cozida e 100g de chuchu refogado com azeite.' },
-    { id: 'm4', name: 'M4 · Tilápia, arroz, abobrinha', kcal: 515, prot: 57, prep: 'Grelhar 200g de tilápia na frigideira grande. Servir com 150g de arroz branco (panela elétrica) e 100g de abobrinha refogada com azeite.' },
+  lanche_manha: [
+    { id: 'lanche1', name: 'Sanduíche de atum', kcal: 280, prot: 30, prep: '09:30, no carro. Montar sanduíche com 50g de pão integral (2 fatias), 60g de atum ralado em água (escorrido) e 30g de requeijão light.' },
   ],
-  lanche: [
-    { id: 's1', name: 'Iogurte + fruta', kcal: 180, prot: 10, prep: 'Misturar 200g de iogurte natural com uma fruta picada.' },
-    { id: 's2', name: 'Queijo cottage ou peito de peru + fruta', kcal: 180, prot: 13, prep: 'Servir 100g de queijo cottage (ou 2 fatias de peito de peru) com uma fruta. Sem preparo, só embalar.' },
-    { id: 's3', name: 'Sanduíche natural', kcal: 280, prot: 22, prep: 'Montar sanduíche com pão integral, frango desfiado e folhas verdes.' },
-    { id: 's4', name: 'Whey + fruta', kcal: 190, prot: 25, prep: 'Bater ou misturar 1 scoop de whey (30g) com água. Servir com uma fruta.' },
-    { id: 's5', name: 'Castanhas + fruta', kcal: 200, prot: 5, prep: 'Servir 20g de mix de castanhas com uma fruta.' },
+  marmita: [
+    { id: 'mar1', name: 'Acém, arroz e repolho', kcal: 380, prot: 28, prep: 'Acém em cubos (90g) cozido na panela elétrica até amaciar. Servir com 120g de arroz branco e 100g de repolho refogado.' },
+    { id: 'mar2', name: 'Carne moída, macarrão e brócolis', kcal: 360, prot: 32, prep: 'Refogar 90g de carne moída (patinho). Servir com 130g de macarrão parafuso cozido e 100g de brócolis cozido no vapor.' },
+    { id: 'mar3', name: 'Frango grelhado, arroz e cenoura', kcal: 340, prot: 32, prep: 'Grelhar 90g de peito de frango. Servir com 120g de arroz branco e 100g de cenoura cozida.' },
+    { id: 'mar4', name: 'Lombo suíno, lentilha e abóbora', kcal: 330, prot: 34, prep: 'Assar 90g de lombo suíno. Servir com 100g de lentilha cozida e 100g de abóbora cozida.' },
+    { id: 'mar5', name: 'Tilápia, arroz e chuchu', kcal: 320, prot: 32, prep: 'Grelhar 110g de filé de tilápia. Servir com 120g de arroz branco e 100g de chuchu refogado.' },
   ],
-  doce: [
-    { id: 't1', name: 'Pasta de leite ninho + uva/morango', kcal: 160, prot: 0, prep: 'Bater 20g de leite em pó com água e adoçante a gosto até virar uma pasta. Servir com 100g de uva ou morango.' },
-    { id: 't2', name: 'Doce de leite ou condensado + fruta', kcal: 140, prot: 0, prep: 'Servir 1 colher de sopa de doce de leite ou leite condensado com uma fruta.' },
-    { id: 't3', name: 'Chocolate 70% cacau', kcal: 115, prot: 0, prep: 'Servir 3-4 quadradinhos (20g) de chocolate 70% cacau.' },
+  pre_treino: [
+    { id: 'pt_agua', name: 'Whey com água', kcal: 120, prot: 24, prep: '16:30, em casa. Bater ou misturar 1 dose de whey protein (30g) com água.' },
+    { id: 'pt_leite', name: 'Whey com leite desnatado', kcal: 205, prot: 32, prep: '16:30, em casa. Bater ou misturar 1 dose de whey protein (30g) com 250ml de leite desnatado em vez de água — rende mais 8g de proteína.' },
+  ],
+  ceia: [
+    { id: 'ceia_iogurte', name: 'Iogurte zero + maçã com canela', kcal: 190, prot: 7, prep: '21:30, antes de dormir. Esquentar 100g de maçã picada com canela no micro-ondas. Servir com 1 iogurte zero açúcar/gordura.' },
+    { id: 'ceia_chocolate', name: 'Chocolate 70% cacau (baixa caloria)', kcal: 115, prot: 0, prep: '21:30, antes de dormir. Servir 3-4 quadradinhos (20g) de chocolate 70% cacau.' },
   ],
 };
 
 const MEAL_TYPES = [
-  { id: 'cafe', label: 'Café' },
-  { id: 'almoco', label: 'Almoço' },
-  { id: 'lanche', label: 'Lanche' },
-  { id: 'janta', label: 'Janta' },
-  { id: 'doce', label: 'Doce' },
-  { id: 'bebida', label: 'Bebida' },
+  { id: 'cafe', label: 'Café', time: '04:30/05:00', weekendTime: null },
+  { id: 'lanche_manha', label: 'Lanche manhã', time: '09:30', weekendTime: null },
+  { id: 'almoco', label: 'Almoço', time: '13:00', weekendTime: '14:30 · refeição livre até 1.000 kcal' },
+  { id: 'pre_treino', label: 'Pré-treino', time: '16:30', weekendTime: '15:45 · whey obrigatório' },
+  { id: 'janta', label: 'Jantar', time: '19:30/20:00', weekendTime: null },
+  { id: 'ceia', label: 'Ceia', time: '21:30', weekendTime: null },
+  { id: 'bebida', label: 'Bebida', time: null, weekendTime: null },
 ];
 
-const PRESET_MAP = { cafe: 'cafe', almoco: 'almoco_janta', janta: 'almoco_janta', lanche: 'lanche', doce: 'doce', bebida: null };
+const PRESET_MAP = { cafe: 'cafe', lanche_manha: 'lanche_manha', almoco: 'marmita', janta: 'marmita', pre_treino: 'pre_treino', ceia: 'ceia', bebida: null };
 
 /* ============================== FOOD SEARCH DATABASE ============================== */
 const FOODS = [
@@ -116,16 +117,27 @@ const FOODS = [
   { id: 'sobrecoxa', name: 'Coxa/sobrecoxa sem pele', kcal100: 180, prot100: 26, unit: 'g', portion: 150 },
   { id: 'alcatra', name: 'Alcatra grelhada', kcal100: 180, prot100: 30, unit: 'g', portion: 150 },
   { id: 'merluza', name: 'Merluza/pescada', kcal100: 100, prot100: 19, unit: 'g', portion: 150 },
+  { id: 'acem', name: 'Acém em cubos (cozido)', kcal100: 221, prot100: 26, unit: 'g', portion: 90 },
+  { id: 'lombo_suino', name: 'Lombo suíno (assado)', kcal100: 201, prot100: 27, unit: 'g', portion: 90 },
+  { id: 'atum', name: 'Atum ralado em água (escorrido)', kcal100: 116, prot100: 26, unit: 'g', portion: 60 },
   { id: 'arroz_branco', name: 'Arroz branco cozido', kcal100: 130, prot100: 2.7, unit: 'g', portion: 150 },
   { id: 'feijao', name: 'Feijão cozido', kcal100: 76, prot100: 4.8, unit: 'g', portion: 100 },
+  { id: 'lentilha', name: 'Lentilha cozida', kcal100: 116, prot100: 9, unit: 'g', portion: 100 },
+  { id: 'macarrao', name: 'Macarrão parafuso cozido', kcal100: 131, prot100: 5, unit: 'g', portion: 100 },
   { id: 'batata_inglesa', name: 'Batata inglesa cozida', kcal100: 60, prot100: 1.8, unit: 'g', portion: 200 },
   { id: 'pimentao', name: 'Pimentão refogado', kcal100: 25, prot100: 1, unit: 'g', portion: 100 },
   { id: 'berinjela', name: 'Berinjela refogada', kcal100: 28, prot100: 1, unit: 'g', portion: 100 },
   { id: 'chuchu', name: 'Chuchu refogado', kcal100: 22, prot100: 0.6, unit: 'g', portion: 100 },
   { id: 'abobrinha', name: 'Abobrinha refogada', kcal100: 20, prot100: 1.2, unit: 'g', portion: 100 },
+  { id: 'abobora', name: 'Abóbora cozida', kcal100: 30, prot100: 1.2, unit: 'g', portion: 100 },
+  { id: 'cenoura', name: 'Cenoura cozida', kcal100: 35, prot100: 0.8, unit: 'g', portion: 100 },
+  { id: 'repolho', name: 'Repolho refogado', kcal100: 25, prot100: 1.3, unit: 'g', portion: 100 },
+  { id: 'brocolis', name: 'Brócolis cozido', kcal100: 35, prot100: 2.4, unit: 'g', portion: 100 },
   { id: 'ovo', name: 'Ovo (mexido/cozido)', kcal100: 155, prot100: 13, unit: 'g', portion: 50 },
   { id: 'pao_integral', name: 'Pão integral (fatia)', kcal100: 253, prot100: 12, unit: 'g', portion: 25 },
   { id: 'queijo_minas', name: 'Queijo minas frescal', kcal100: 240, prot100: 19, unit: 'g', portion: 30 },
+  { id: 'mussarela', name: 'Queijo muçarela', kcal100: 280, prot100: 22, unit: 'g', portion: 30 },
+  { id: 'requeijao_light', name: 'Requeijão light', kcal100: 175, prot100: 9, unit: 'g', portion: 30 },
   { id: 'queijo_cottage', name: 'Queijo cottage', kcal100: 98, prot100: 11, unit: 'g', portion: 100 },
   { id: 'peito_peru', name: 'Peito de peru fatiado', kcal100: 110, prot100: 20, unit: 'g', portion: 50 },
   { id: 'iogurte', name: 'Iogurte natural', kcal100: 55, prot100: 4, unit: 'g', portion: 200 },
@@ -200,11 +212,17 @@ const PANTRY_ITEMS = [
   { id: 'frango_desfiado', name: 'Frango pra desfiar', cat: 'Açougue e Peixaria', unit: 'g', gramsPerUnit: 1, threshold: 150 },
   { id: 'carne_moida', name: 'Carne moída (patinho)', cat: 'Açougue e Peixaria', unit: 'g', gramsPerUnit: 1, threshold: 150 },
   { id: 'tilapia', name: 'Tilápia', cat: 'Açougue e Peixaria', unit: 'g', gramsPerUnit: 1, threshold: 150 },
+  { id: 'acem', name: 'Acém em cubos', cat: 'Açougue e Peixaria', unit: 'g', gramsPerUnit: 1, threshold: 150 },
+  { id: 'lombo_suino', name: 'Lombo suíno', cat: 'Açougue e Peixaria', unit: 'g', gramsPerUnit: 1, threshold: 150 },
   { id: 'batata_inglesa', name: 'Batata inglesa', cat: 'Hortifruti', unit: 'kg', gramsPerUnit: 1000, threshold: 300 },
   { id: 'pimentao', name: 'Pimentão', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 150, threshold: 150 },
   { id: 'berinjela', name: 'Berinjela', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 250, threshold: 250 },
   { id: 'chuchu', name: 'Chuchu', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 300, threshold: 300 },
   { id: 'abobrinha', name: 'Abobrinha', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 200, threshold: 200 },
+  { id: 'abobora', name: 'Abóbora', cat: 'Hortifruti', unit: 'g', gramsPerUnit: 1, threshold: 200 },
+  { id: 'cenoura', name: 'Cenoura', cat: 'Hortifruti', unit: 'g', gramsPerUnit: 1, threshold: 150 },
+  { id: 'repolho', name: 'Repolho', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 900, threshold: 200 },
+  { id: 'brocolis', name: 'Brócolis', cat: 'Hortifruti', unit: 'maço', gramsPerUnit: 300, threshold: 150 },
   { id: 'banana', name: 'Banana', cat: 'Hortifruti', unit: 'un', gramsPerUnit: 120, threshold: 240 },
   { id: 'uva', name: 'Uva', cat: 'Hortifruti', unit: 'g', gramsPerUnit: 1, threshold: 150 },
   { id: 'morango', name: 'Morango', cat: 'Hortifruti', unit: 'g', gramsPerUnit: 1, threshold: 150 },
@@ -216,10 +234,15 @@ const PANTRY_ITEMS = [
   { id: 'leite', name: 'Leite', cat: 'Frios e Laticínios', unit: 'L', gramsPerUnit: 1000, threshold: 200 },
   { id: 'iogurte', name: 'Iogurte natural', cat: 'Frios e Laticínios', unit: 'un', gramsPerUnit: 170, threshold: 170 },
   { id: 'queijo_minas', name: 'Queijo minas frescal', cat: 'Frios e Laticínios', unit: 'g', gramsPerUnit: 1, threshold: 60 },
+  { id: 'mussarela', name: 'Queijo muçarela', cat: 'Frios e Laticínios', unit: 'g', gramsPerUnit: 1, threshold: 60 },
+  { id: 'requeijao_light', name: 'Requeijão light', cat: 'Frios e Laticínios', unit: 'g', gramsPerUnit: 1, threshold: 60 },
   { id: 'queijo_cottage', name: 'Queijo cottage', cat: 'Frios e Laticínios', unit: 'g', gramsPerUnit: 1, threshold: 100 },
   { id: 'peito_peru', name: 'Peito de peru fatiado', cat: 'Frios e Laticínios', unit: 'g', gramsPerUnit: 1, threshold: 50 },
   { id: 'arroz_branco', name: 'Arroz branco', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 1000, yieldFactor: 2.5, threshold: 200, isPackage: true },
   { id: 'feijao', name: 'Feijão (grão seco)', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 1000, yieldFactor: 2.2, threshold: 150, isPackage: true },
+  { id: 'lentilha', name: 'Lentilha (grão seco)', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 500, yieldFactor: 2.2, threshold: 100, isPackage: true },
+  { id: 'macarrao', name: 'Macarrão parafuso', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 500, threshold: 100, isPackage: true },
+  { id: 'atum', name: 'Atum ralado em água', cat: 'Mercearia', unit: 'lata', gramsPerUnit: 120, threshold: 120, isPackage: true },
   { id: 'aveia', name: 'Aveia em flocos', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 500, threshold: 80, isPackage: true },
   { id: 'granola', name: 'Granola', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 500, threshold: 60, isPackage: true },
   { id: 'tapioca_goma', name: 'Goma de tapioca', cat: 'Mercearia', unit: 'pacote', gramsPerUnit: 500, threshold: 80, isPackage: true },
@@ -241,23 +264,17 @@ const UNIT_CONSUMABLE_IDS = new Set(['iogurte', 'ovo', 'pimentao', 'berinjela', 
 // { id, g } = fixed ingredient. { fruit: g } = generic fruit slot (resolved to whichever tracked fruit has the lowest stock).
 // { fruitChoice: [ids], g } = pick lowest-stock among a restricted set.
 const DIET_INGREDIENTS = {
-  b1s: [{ id: 'banana', g: 100 }, { id: 'aveia', g: 40 }, { id: 'leite', g: 200 }],
-  b1c: [{ id: 'banana', g: 100 }, { id: 'aveia', g: 40 }, { id: 'leite', g: 200 }, { id: 'whey', g: 30 }],
-  b2: [{ id: 'ovo', g: 100 }, { id: 'pao_integral', g: 75 }, { id: 'queijo_minas', g: 30 }, { fruit: 100 }],
-  b3: [{ id: 'iogurte', g: 200 }, { id: 'granola', g: 30 }, { fruit: 100 }],
-  b4: [{ id: 'tapioca_goma', g: 40 }, { id: 'frango_desfiado', g: 60 }, { fruit: 100 }],
-  m1: [{ id: 'frango_grelhado', g: 200 }, { id: 'arroz_branco', g: 150 }, { id: 'feijao', g: 100 }, { id: 'pimentao', g: 100 }],
-  m2: [{ id: 'carne_moida', g: 200 }, { id: 'arroz_branco', g: 150 }, { id: 'berinjela', g: 100 }],
-  m3: [{ id: 'frango_desfiado', g: 180 }, { id: 'batata_inglesa', g: 220 }, { id: 'chuchu', g: 100 }],
-  m4: [{ id: 'tilapia', g: 200 }, { id: 'arroz_branco', g: 150 }, { id: 'abobrinha', g: 100 }],
-  s1: [{ id: 'iogurte', g: 200 }, { fruit: 100 }],
-  s2: [{ id: 'queijo_cottage', g: 100 }, { fruit: 100 }],
-  s3: [{ id: 'pao_integral', g: 50 }, { id: 'frango_desfiado', g: 50 }],
-  s4: [{ id: 'whey', g: 30 }, { fruit: 100 }],
-  s5: [{ id: 'castanhas', g: 20 }, { fruit: 100 }],
-  t1: [{ id: 'leite_po', g: 20 }, { fruitChoice: ['uva', 'morango'], g: 100 }],
-  t2: [{ id: 'doce_leite', g: 20 }, { fruit: 100 }],
-  t3: [{ id: 'chocolate70', g: 20 }],
+  cafe1: [{ id: 'ovo', g: 150 }, { id: 'pao_integral', g: 50 }, { id: 'mussarela', g: 30 }],
+  lanche1: [{ id: 'pao_integral', g: 50 }, { id: 'atum', g: 60 }, { id: 'requeijao_light', g: 30 }],
+  mar1: [{ id: 'acem', g: 90 }, { id: 'arroz_branco', g: 120 }, { id: 'repolho', g: 100 }],
+  mar2: [{ id: 'carne_moida', g: 90 }, { id: 'macarrao', g: 130 }, { id: 'brocolis', g: 100 }],
+  mar3: [{ id: 'frango_grelhado', g: 90 }, { id: 'arroz_branco', g: 120 }, { id: 'cenoura', g: 100 }],
+  mar4: [{ id: 'lombo_suino', g: 90 }, { id: 'lentilha', g: 100 }, { id: 'abobora', g: 100 }],
+  mar5: [{ id: 'tilapia', g: 110 }, { id: 'arroz_branco', g: 120 }, { id: 'chuchu', g: 100 }],
+  pt_agua: [{ id: 'whey', g: 30 }],
+  pt_leite: [{ id: 'whey', g: 30 }, { id: 'leite', g: 250 }],
+  ceia_iogurte: [{ id: 'iogurte', g: 200 }, { id: 'maca', g: 100 }],
+  ceia_chocolate: [{ id: 'chocolate70', g: 20 }],
 };
 
 function resolveLowestStock(stock, candidates) {
@@ -596,13 +613,14 @@ function WeightChart({ weights }) {
 function App() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('hoje');
-  const [settings, setSettings] = useState({ kcalGoal: 2100, proteinGoal: 170, waterGoalMl: 3500 });
+  const [settings, setSettings] = useState({ kcalGoal: 2150, proteinGoal: 170, waterGoalMl: 3500 });
   const [logs, setLogs] = useState({});
   const [weights, setWeights] = useState([]);
   const [pantry, setPantry] = useState(emptyPantry());
   const [toast, setToast] = useState('');
 
   const dateKey = useMemo(() => formatDateKey(new Date()), []);
+  const isWeekend = useMemo(() => { const dow = new Date().getDay(); return dow === 0 || dow === 6; }, []);
   const rawToday = logs[dateKey] || emptyDay();
   const today = {
     ...rawToday,
@@ -650,7 +668,7 @@ function App() {
   const [freeProt, setFreeProt] = useState('');
 
   useEffect(() => {
-    const s = loadJSON('settings', { kcalGoal: 2100, proteinGoal: 170, waterGoalMl: 3500 });
+    const s = loadJSON('settings', { kcalGoal: 2150, proteinGoal: 170, waterGoalMl: 3500 });
     const l = loadJSON('logs', {});
     const w = loadJSON('weights', []);
     const p = loadJSON('pantry', emptyPantry());
@@ -1000,7 +1018,7 @@ function App() {
   const totalKcal = today.meals.reduce((s, m) => s + m.kcal, 0);
   const totalProt = today.meals.reduce((s, m) => s + m.prot, 0);
   const totalWaterMl = (today.waterLog || []).reduce((s, w) => s + w.ml, 0);
-  const treatLoggedToday = today.meals.some((m) => m.mealType === 'doce');
+  const treatLoggedToday = today.meals.some((m) => m.mealType === 'ceia');
   const over = totalKcal - settings.kcalGoal;
 
   const latestWeightKg = useMemo(() => {
@@ -1138,7 +1156,7 @@ function App() {
                   </div>
                   <div style={{ fontSize: 13, color: PALETTE.text, lineHeight: 1.4 }}>
                     Sugestão: corte cerca de {Math.round(over / 1.3)}g de arroz (ou equivalente) na próxima refeição
-                    {!treatLoggedToday ? ', ou pule o doce de hoje — só ele já cobre boa parte disso.' : '.'}
+                    {!treatLoggedToday ? ', ou troque a ceia de hoje pelo chocolate em vez do iogurte+maçã — economiza um pouco.' : '.'}
                   </div>
                 </div>
               )}
@@ -1374,6 +1392,27 @@ function App() {
                   </PillButton>
                 ))}
               </div>
+
+              {(() => {
+                const activeMeal = MEAL_TYPES.find((mt) => mt.id === mealType);
+                const weekendNote = isWeekend && activeMeal && activeMeal.weekendTime;
+                const plainTime = activeMeal && activeMeal.time;
+                if (!weekendNote && !plainTime) return null;
+                return (
+                  <div style={{ fontSize: 11.5, color: weekendNote ? PALETTE.honey : PALETTE.textMuted, fontFamily: FONT_MONO }}>
+                    {weekendNote ? `Fim de semana · ${weekendNote}` : `Horário sugerido · ${plainTime}`}
+                  </div>
+                );
+              })()}
+
+              {isWeekend && mealType === 'almoco' && (
+                <div style={cardStyle({ background: 'rgba(226,169,59,0.12)', border: `1px solid ${PALETTE.honey}` })}>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: PALETTE.honey, marginBottom: 4 }}>Refeição livre do fim de semana</div>
+                  <div style={{ fontSize: 12.5, color: PALETTE.text, lineHeight: 1.4 }}>
+                    No almoço de sábado/domingo (~14:30) você pode trocar a marmita por uma refeição livre de até 1.000 kcal (ex: hambúrguer artesanal com batata). Registre ela em "Buscar alimento" ou em "Comeu algo fora da dieta" aqui embaixo. Não esqueça o whey às 15:45 (aba Pré-treino) — ele é obrigatório pra manter o aporte de proteína do dia.
+                  </div>
+                </div>
+              )}
 
               {presets.length > 0 && (
                 <div>
