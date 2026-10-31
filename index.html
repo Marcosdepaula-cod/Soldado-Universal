@@ -47,6 +47,8 @@ const Plus = (p) => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19" /><line x1
 const Flame = (p) => <Icon {...p}><path d="M12 3c1 3-3 4-3 8a3 3 0 0 0 6 0c0-1-1-2-1-3 1.5 1 2 3 2 5a4 4 0 0 1-8 0c0-4 3-6 4-10Z" /></Icon>;
 const AlertTriangle = (p) => <Icon {...p}><path d="M12 4 2 20h20L12 4Z" /><line x1="12" y1="10" x2="12" y2="15" /><line x1="12" y1="17.5" x2="12" y2="17.51" /></Icon>;
 const ChevronDown = (p) => <Icon {...p}><polyline points="6,9 12,15 18,9" /></Icon>;
+const ListChecks = (p) => <Icon {...p}><path d="M3 6l1.5 1.5L7.5 4" /><line x1="11" y1="6" x2="21" y2="6" /><path d="M3 13l1.5 1.5L7.5 10" /><line x1="11" y1="13" x2="21" y2="13" /><path d="M3 20l1.5 1.5L7.5 17" /><line x1="11" y1="20" x2="21" y2="20" /></Icon>;
+const Check = (p) => <Icon {...p}><polyline points="4,12 9,17 20,6" /></Icon>;
 
 /* ============================== PALETTE ============================== */
 const PALETTE = {
@@ -277,6 +279,41 @@ const DIET_INGREDIENTS = {
   ceia_chocolate: [{ id: 'chocolate70', g: 20 }],
 };
 
+/* ============================== LISTA DE COMPRAS (plano v3, 15 dias / 30 refeições — Pague Menos) ============================== */
+// `targets`: quais itens da despensa (e quantas gramas "cruas") são creditados quando o item é marcado como comprado.
+// `priceEst`: valor do PDF, usado como ponto de partida — fica editável no app quando você faz a compra de verdade.
+const SHOPPING_LIST = [
+  { key: 'acem', name: 'Acém em cubos (carne de panela)', qtyLabel: '800g', priceEst: 35.19, targets: [{ id: 'acem', grams: 800 }] },
+  { key: 'carne_moida', name: 'Carne moída (acém ou dianteiro)', qtyLabel: '800g', priceEst: 32.00, targets: [{ id: 'carne_moida', grams: 800 }] },
+  { key: 'frango', name: 'Filé de peito de frango', qtyLabel: '800g', priceEst: 15.20, targets: [{ id: 'frango_grelhado', grams: 800 }] },
+  { key: 'lombo', name: 'Lombo suíno', qtyLabel: '800g', priceEst: 19.20, targets: [{ id: 'lombo_suino', grams: 800 }] },
+  { key: 'tilapia', name: 'Filé de tilápia', qtyLabel: '800g', priceEst: 40.00, targets: [{ id: 'tilapia', grams: 800 }] },
+  { key: 'arroz', name: 'Arroz branco', qtyLabel: '900g cru (18 porções)', priceEst: 6.00, targets: [{ id: 'arroz_branco', grams: 900 }] },
+  { key: 'feijao', name: 'Feijão carioca', qtyLabel: '1 pacote de 1kg (usa 240g)', priceEst: 8.50, targets: [{ id: 'feijao', grams: 1000 }] },
+  { key: 'lentilha', name: 'Lentilha', qtyLabel: '1 pacote de 500g (usa 240g)', priceEst: 8.00, targets: [{ id: 'lentilha', grams: 500 }] },
+  { key: 'macarrao', name: 'Macarrão parafuso', qtyLabel: '1 pacote de 500g (usa 420g)', priceEst: 4.50, targets: [{ id: 'macarrao', grams: 500 }] },
+  { key: 'legumes_variados', name: 'Legumes variados (chuchu, abóbora, cenoura, batata)', qtyLabel: '800g de cada tipo', priceEst: 19.60, targets: [{ id: 'chuchu', grams: 800 }, { id: 'abobora', grams: 800 }, { id: 'cenoura', grams: 800 }, { id: 'batata_inglesa', grams: 800 }] },
+  { key: 'verduras', name: 'Verduras (repolho e brócolis)', qtyLabel: '1 unidade / 1 maço de cada', priceEst: 13.00, targets: [{ id: 'repolho', grams: 900 }, { id: 'brocolis', grams: 300 }] },
+  { key: 'ovos', name: 'Ovos inteiros', qtyLabel: '45 ovos (1 cartela de 30 + 1 de 15)', priceEst: 32.00, targets: [{ id: 'ovo', grams: 2250 }] },
+  { key: 'pao', name: 'Pão de forma integral', qtyLabel: '3 pacotes', priceEst: 24.00, targets: [{ id: 'pao_integral', grams: 1200 }] },
+  { key: 'mussarela', name: 'Queijo muçarela fatiado', qtyLabel: '450g', priceEst: 22.00, targets: [{ id: 'mussarela', grams: 450 }] },
+  { key: 'atum', name: 'Atum ralado em água', qtyLabel: '12 latas', priceEst: 84.00, targets: [{ id: 'atum', grams: 1440 }] },
+  { key: 'requeijao', name: 'Requeijão light', qtyLabel: '2 copos', priceEst: 16.00, targets: [{ id: 'requeijao_light', grams: 400 }] },
+  { key: 'iogurte_maca', name: 'Iogurte zero + maçãs', qtyLabel: '15 potes + 1,5kg de maçã', priceEst: 55.00, targets: [{ id: 'iogurte', grams: 2550 }, { id: 'maca', grams: 1500 }] },
+];
+
+const PREP_MANUAL = [
+  { title: 'Fase 1 — Grãos na panela de arroz', text: 'Cozinhe primeiro a lentilha (240g) por 25min, depois o feijão (240g) por 40min (sempre monitorando a água). Em seguida, faça o arroz (900g) dividido em dois lotes pra não transbordar.' },
+  { title: 'Fase 2 — Legumes e frango no micro-ondas (no vapor)', text: 'Coloque os vegetais picados em recipientes refratários com 2 colheres de sopa de água e tampe com plástico filme furado. Abóbora e peito de frango em cubos levam de 7 a 9 minutos (balance o pote tampado pra desfiar o frango). Batata e cenoura levam de 6 a 8 minutos. Chuchu (4 min), brócolis e repolho (3 min) devem ficar bem al dente pra não soltarem água depois de congelar.' },
+  { title: 'Fase 3 — Carnes longas e massa na panela de arroz', text: 'Refogue a carne moída (800g) com alho e cebola no modo "Cozinhar", mexendo bem. Retire. Insira o acém em cubos (800g), sele, adicione meia xícara de água quente e deixe amaciar por 30min. Por fim, ferva água pra cozinhar o macarrão (420g), retirando 2 minutos antes do tempo padrão.' },
+];
+
+const STORAGE_LOGISTICS = [
+  'Freezer vs geladeira: no dia do preparo, guarde só 6 marmitas na geladeira (consumo de 3 dias). Mande as outras 24 direto pro congelador. Transfira do freezer pra geladeira 24h antes de comer.',
+  'Bolsa térmica de 2 andares: esquente o almoço e o jantar em casa antes de sair. Coloque as refeições quentes no compartimento de baixo (o calor sobe). Coloque os lanches frios, a garrafa de água e o iogurte no compartimento de cima, junto com um gel térmico rígido.',
+  'No carro: deixe a lancheira térmica no chão do banco do passageiro — é o lugar mais protegido do sol direto e pega o fluxo do ar-condicionado.',
+];
+
 function resolveLowestStock(stock, candidates) {
   let best = candidates[0];
   let bestVal = stock[best] ?? 0;
@@ -325,6 +362,28 @@ function formatStock(item, stockGrams, gramsPerUnitOverride) {
     return `${rounded} pacote${rounded === 1 ? '' : 's'} (${Math.round(stockGrams)}g)`;
   }
   return `${rounded} ${item.unit}`;
+}
+
+// Credita (ou remove, com delta negativo) gramas "cruas" no estoque de um item — usado quando a Lista de
+// Compras é marcada/desmarcada, pra manter a despensa em dia sem precisar passar pelo "Registrar compra".
+function creditPantryStock(pantry, itemId, deltaGrams) {
+  const item = PANTRY_ITEMS.find((p) => p.id === itemId);
+  if (!item) return pantry;
+  const stock = { ...pantry.stock };
+  const warned = { ...pantry.warned };
+  const prev = stock[itemId] ?? 0;
+  const next = Math.max(0, prev + deltaGrams);
+  stock[itemId] = next;
+  if (next > item.threshold) warned[itemId] = false;
+  return { ...pantry, stock, warned };
+}
+
+function emptyShopping() {
+  return { checked: {}, prices: {} };
+}
+
+function formatBRL(n) {
+  return 'R$ ' + (Number(n) || 0).toFixed(2).replace('.', ',');
 }
 
 function emptyPantry() {
@@ -617,6 +676,8 @@ function App() {
   const [logs, setLogs] = useState({});
   const [weights, setWeights] = useState([]);
   const [pantry, setPantry] = useState(emptyPantry());
+  const [shopping, setShopping] = useState(emptyShopping());
+  const [prepExpanded, setPrepExpanded] = useState(false);
   const [toast, setToast] = useState('');
 
   const dateKey = useMemo(() => formatDateKey(new Date()), []);
@@ -672,10 +733,12 @@ function App() {
     const l = loadJSON('logs', {});
     const w = loadJSON('weights', []);
     const p = loadJSON('pantry', emptyPantry());
+    const sh = loadJSON('shopping', emptyShopping());
     setSettings(s);
     setLogs(l);
     setWeights(w);
     setPantry({ stock: p.stock || {}, warned: p.warned || {}, recentPurchases: p.recentPurchases || [], unitSizes: p.unitSizes || {}, consumptionSeen: p.consumptionSeen || {} });
+    setShopping({ checked: sh.checked || {}, prices: sh.prices || {} });
     setLoading(false);
   }, []);
 
@@ -1015,6 +1078,36 @@ function App() {
     setPantrySearch('');
   }
 
+  // Marca/desmarca um item da Lista de Compras. Ao marcar, credita os ingredientes correspondentes
+  // direto na despensa (sem passar pelo "Registrar compra"); ao desmarcar, desfaz o crédito.
+  function toggleShoppingItem(entry) {
+    const wasChecked = !!shopping.checked[entry.key];
+    const sign = wasChecked ? -1 : 1;
+    let nextPantry = pantry;
+    for (const t of entry.targets) {
+      nextPantry = creditPantryStock(nextPantry, t.id, sign * t.grams);
+    }
+    setPantry(nextPantry);
+    saveJSON('pantry', nextPantry);
+    const nextShopping = { ...shopping, checked: { ...shopping.checked, [entry.key]: !wasChecked } };
+    setShopping(nextShopping);
+    saveJSON('shopping', nextShopping);
+    setToast(wasChecked ? `${entry.name} desmarcado` : `${entry.name} adicionado à despensa`);
+  }
+
+  function updateShoppingPrice(key, value) {
+    const nextShopping = { ...shopping, prices: { ...shopping.prices, [key]: value } };
+    setShopping(nextShopping);
+    saveJSON('shopping', nextShopping);
+  }
+
+  function resetShoppingList() {
+    const next = emptyShopping();
+    setShopping(next);
+    saveJSON('shopping', next);
+    setToast('Lista de compras reiniciada');
+  }
+
   const totalKcal = today.meals.reduce((s, m) => s + m.kcal, 0);
   const totalProt = today.meals.reduce((s, m) => s + m.prot, 0);
   const totalWaterMl = (today.waterLog || []).reduce((s, w) => s + w.ml, 0);
@@ -1047,6 +1140,15 @@ function App() {
 
   const presetKey = PRESET_MAP[mealType];
   const presets = presetKey ? DIET[presetKey] : [];
+
+  const shoppingPrice = (it) => {
+    const v = shopping.prices[it.key];
+    return v !== undefined && v !== '' && !Number.isNaN(Number(v)) ? Number(v) : it.priceEst;
+  };
+  const shoppingTotalEst = SHOPPING_LIST.reduce((s, it) => s + it.priceEst, 0);
+  const shoppingTotalNow = SHOPPING_LIST.reduce((s, it) => s + shoppingPrice(it), 0);
+  const shoppingCheckedCount = SHOPPING_LIST.filter((it) => shopping.checked[it.key]).length;
+  const shoppingSpent = SHOPPING_LIST.reduce((s, it) => (shopping.checked[it.key] ? s + shoppingPrice(it) : s), 0);
 
   const filteredFoods = useMemo(() => {
     if (!search.trim()) return [];
@@ -2075,6 +2177,145 @@ function App() {
             </div>
           )}
 
+          {tab === 'lista' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={cardStyle()}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setPrepExpanded(!prepExpanded)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') setPrepExpanded(!prepExpanded); }}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                >
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 800 }}>Modo de preparo (quinzenal)</div>
+                    <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginTop: 2 }}>Como cozinhar e guardar as 30 refeições de uma vez</div>
+                  </div>
+                  <ChevronDown size={16} style={{ transform: prepExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease', flexShrink: 0 }} />
+                </div>
+                {prepExpanded && (
+                  <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {PREP_MANUAL.map((phase) => (
+                      <div key={phase.title}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: PALETTE.honey, marginBottom: 3 }}>{phase.title}</div>
+                        <div style={{ fontSize: 12.5, color: PALETTE.text, lineHeight: 1.5 }}>{phase.text}</div>
+                      </div>
+                    ))}
+                    <div style={{ borderTop: `1px solid ${PALETTE.border}`, paddingTop: 10 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: PALETTE.honey, marginBottom: 6 }}>Armazenamento e transporte</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {STORAGE_LOGISTICS.map((line, i) => (
+                          <div key={i} style={{ fontSize: 12.5, color: PALETTE.text, lineHeight: 1.5 }}>{line}</div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={cardStyle()}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: PALETTE.textMuted, marginBottom: 10 }}>
+                  Lista de Compras · 15 dias / 30 refeições
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+                  <span style={{ color: PALETTE.textMuted }}>Marcados</span>
+                  <span style={{ fontFamily: FONT_MONO }}>{shoppingCheckedCount}/{SHOPPING_LIST.length}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+                  <span style={{ color: PALETTE.textMuted }}>Já gasto (marcados)</span>
+                  <span style={{ fontFamily: FONT_MONO, color: PALETTE.honey }}>{formatBRL(shoppingSpent)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 800, marginTop: 6, paddingTop: 8, borderTop: `1px solid ${PALETTE.border}` }}>
+                  <span>Total da lista</span>
+                  <span style={{ fontFamily: FONT_MONO }}>{formatBRL(shoppingTotalNow)}</span>
+                </div>
+                {Math.abs(shoppingTotalNow - shoppingTotalEst) > 0.01 && (
+                  <div style={{ fontSize: 11, color: PALETTE.textMuted, textAlign: 'right', marginTop: 2 }}>
+                    estimado do plano: {formatBRL(shoppingTotalEst)}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {SHOPPING_LIST.map((it) => {
+                  const checked = !!shopping.checked[it.key];
+                  return (
+                    <div key={it.key} style={cardStyle({ padding: '12px 14px', opacity: checked ? 0.6 : 1 })}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => toggleShoppingItem(it)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') toggleShoppingItem(it); }}
+                          aria-label={checked ? 'Desmarcar item' : 'Marcar como comprado'}
+                          style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flex: 1, cursor: 'pointer' }}
+                        >
+                          <div
+                            style={{
+                              width: 22,
+                              height: 22,
+                              borderRadius: 6,
+                              border: `1.5px solid ${checked ? PALETTE.sage : PALETTE.border}`,
+                              background: checked ? PALETTE.sage : 'transparent',
+                              color: '#1B1815',
+                              flexShrink: 0,
+                              marginTop: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            {checked && <Check size={14} />}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13.5, textDecoration: checked ? 'line-through' : 'none' }}>{it.name}</div>
+                            <div style={{ fontSize: 11.5, color: PALETTE.textMuted, marginTop: 1 }}>{it.qtyLabel}</div>
+                          </div>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                          <span style={{ fontSize: 12.5, color: PALETTE.textMuted }}>R$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={shopping.prices[it.key] !== undefined ? shopping.prices[it.key] : it.priceEst}
+                            onChange={(e) => updateShoppingPrice(it.key, e.target.value)}
+                            style={{
+                              width: 76,
+                              background: PALETTE.surfaceAlt,
+                              border: `1px solid ${PALETTE.border}`,
+                              borderRadius: 8,
+                              color: PALETTE.text,
+                              padding: '6px 6px',
+                              fontSize: 13,
+                              fontFamily: FONT_MONO,
+                              textAlign: 'right',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={resetShoppingList}
+                style={{
+                  background: 'none',
+                  border: `1px solid ${PALETTE.border}`,
+                  borderRadius: 14,
+                  color: PALETTE.textMuted,
+                  fontSize: 12.5,
+                  padding: '10px 14px',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                Reiniciar lista (começar quinzena nova)
+              </button>
+            </div>
+          )}
+
           {tab === 'progresso' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={cardStyle()}>
@@ -2228,6 +2469,7 @@ function App() {
           {[
             { id: 'hoje', label: 'Hoje', Icon: Home },
             { id: 'refeicoes', label: 'Refeições', Icon: UtensilsCrossed },
+            { id: 'lista', label: 'Lista', Icon: ListChecks },
             { id: 'despensa', label: 'Despensa', Icon: Package },
             { id: 'progresso', label: 'Progresso', Icon: TrendingUp },
           ].map(({ id, label, Icon }) => (
