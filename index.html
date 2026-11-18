@@ -93,7 +93,7 @@ const DIET = {
     { id: 'pt_leite', name: 'Whey com leite desnatado', kcal: 205, prot: 32, prep: '16:30, em casa. Bater ou misturar 1 dose de whey protein (30g) com 250ml de leite desnatado em vez de água — rende mais 8g de proteína.' },
   ],
   ceia: [
-    { id: 'ceia_iogurte', name: 'Iogurte zero + maçã com canela', kcal: 190, prot: 7, prep: '21:30, antes de dormir. Esquentar 100g de maçã picada com canela no micro-ondas. Servir com 1 iogurte zero açúcar/gordura.' },
+    { id: 'ceia_iogurte', name: 'Iogurte zero + maçã com canela', kcal: 190, prot: 7, prep: '21:30, antes de dormir. Assar 100g de maçã picada com canela na air fryer, 180°C por 10 min (ou esquentar no micro-ondas). Servir com 1 iogurte zero açúcar/gordura.' },
     { id: 'ceia_chocolate', name: 'Chocolate 70% cacau (baixa caloria)', kcal: 115, prot: 0, prep: '21:30, antes de dormir. Servir 3-4 quadradinhos (20g) de chocolate 70% cacau.' },
   ],
 };
@@ -302,10 +302,25 @@ const SHOPPING_LIST = [
   { key: 'iogurte_maca', name: 'Iogurte zero + maçãs', qtyLabel: '15 potes + 1,5kg de maçã', priceEst: 55.00, targets: [{ id: 'iogurte', grams: 2550 }, { id: 'maca', grams: 1500 }] },
 ];
 
+// Cada fase tem `text` (parágrafo) e/ou `items` (tópicos). Fase 2 usa a air fryer EAF90 (forno air fryer 12L da Rita Lobo).
 const PREP_MANUAL = [
   { title: 'Fase 1 — Grãos na panela de arroz', text: 'Cozinhe primeiro a lentilha (240g) por 25min, depois o feijão (240g) por 40min (sempre monitorando a água). Em seguida, faça o arroz (900g) dividido em dois lotes pra não transbordar.' },
-  { title: 'Fase 2 — Legumes e frango no micro-ondas (no vapor)', text: 'Coloque os vegetais picados em recipientes refratários com 2 colheres de sopa de água e tampe com plástico filme furado. Abóbora e peito de frango em cubos levam de 7 a 9 minutos (balance o pote tampado pra desfiar o frango). Batata e cenoura levam de 6 a 8 minutos. Chuchu (4 min), brócolis e repolho (3 min) devem ficar bem al dente pra não soltarem água depois de congelar.' },
+  {
+    title: 'Fase 2 — Proteínas e legumes na air fryer',
+    text: 'Enquanto a panela trabalha, vá rodando a air fryer. Os tempos são ponto de partida — o Air Fry também tem programas prontos de frango, peixe, carne, legumes e batata.',
+    items: [
+      'Frango (800g em cubos): marinado na mostarda, mel, páprica doce e defumada. 180°C por 15–18 min, mexendo na metade. Não passe de 180°C, que o mel queima.',
+      'Lombo suíno (800g): inteiro no espeto giratório, 190°C por uns 45–50 min — pronto quando o centro passar de 63°C ou o caldo sair transparente. Ou em medalhões na grelha: 190°C por 12–15 min, virando na metade.',
+      'Tilápia (800g): 190°C por 10–12 min, sem virar. Tire um pouco antes do ponto — ela termina de cozinhar quando você esquenta a marmita.',
+      'Abóbora, cenoura e batata em cubos: 200°C, mexendo na metade. Abóbora e cenoura levam 15–20 min; batata, 20–25 min.',
+      'Brócolis: 180°C por 8–10 min. Mais que isso, ele solta água depois de congelar.',
+      'Use as 2 grelhas ao mesmo tempo (ex.: frango em cima, abóbora embaixo) e troque de andar na metade — a de cima doura mais rápido.',
+      'Sem óleo, as calorias do app não mudam. Se usar azeite, prefira o borrifador — 1 colher de chá (5g) soma uns 44 kcal.',
+    ],
+  },
   { title: 'Fase 3 — Carnes longas e massa na panela de arroz', text: 'Refogue a carne moída (800g) com alho e cebola no modo "Cozinhar", mexendo bem. Retire. Insira o acém em cubos (800g), sele, adicione meia xícara de água quente e deixe amaciar por 30min. Por fim, ferva água pra cozinhar o macarrão (420g), retirando 2 minutos antes do tempo padrão.' },
+  { title: 'Em paralelo — chuchu e repolho no micro-ondas (no vapor)', text: 'Esses dois soltam muita água e murcham na air fryer. Coloque picados em recipiente refratário com 2 colheres de sopa de água e tampe com plástico filme furado: chuchu 4 min, repolho 3 min — bem al dente, pra não soltarem água depois de congelar.' },
+  { title: 'Opcional — café da semana na air fryer', text: 'Asse os ovos com muçarela em forminhas de silicone (1 ovo por forminha, 3 por café), 160°C por 12–15 min. Duram até 4 dias na geladeira — a porção de sexta, congele. De manhã, use a função Reaquecer por 3–4 min junto com o pão.' },
 ];
 
 const STORAGE_LOGISTICS = [
@@ -2198,7 +2213,14 @@ function App() {
                     {PREP_MANUAL.map((phase) => (
                       <div key={phase.title}>
                         <div style={{ fontSize: 12.5, fontWeight: 700, color: PALETTE.honey, marginBottom: 3 }}>{phase.title}</div>
-                        <div style={{ fontSize: 12.5, color: PALETTE.text, lineHeight: 1.5 }}>{phase.text}</div>
+                        {phase.text && <div style={{ fontSize: 12.5, color: PALETTE.text, lineHeight: 1.5 }}>{phase.text}</div>}
+                        {phase.items && (
+                          <ul style={{ margin: '6px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {phase.items.map((line, i) => (
+                              <li key={i} style={{ fontSize: 12.5, color: PALETTE.text, lineHeight: 1.5 }}>{line}</li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     ))}
                     <div style={{ borderTop: `1px solid ${PALETTE.border}`, paddingTop: 10 }}>
