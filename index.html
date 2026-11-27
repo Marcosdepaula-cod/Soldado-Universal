@@ -1180,6 +1180,15 @@ function App() {
 
   useEffect(() => {
     try {
+      if (sessionStorage.getItem('noponto-imported')) {
+        sessionStorage.removeItem('noponto-imported');
+        setToast('Dados importados');
+      }
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    try {
       window.scrollTo(0, 0);
     } catch (e) {}
   }, [tab]);
@@ -1288,6 +1297,68 @@ function App() {
       localStorage.removeItem(STORAGE_PREFIX + key);
     }
     window.location.reload();
+  }
+
+  function appStorageKeys() {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(STORAGE_PREFIX)) keys.push(k);
+    }
+    return keys;
+  }
+
+  async function exportAllData() {
+    const data = {};
+    for (const k of appStorageKeys()) data[k.slice(STORAGE_PREFIX.length)] = localStorage.getItem(k);
+    const payload = JSON.stringify({ app: 'noponto', v: 1, exportedAt: new Date().toISOString(), data });
+    // .txt porque o Chrome do Android só compartilha arquivos de tipos conhecidos
+    const name = `no-ponto-backup-${formatDateKey(new Date())}.txt`;
+    let file = null;
+    try { file = new File([payload], name, { type: 'text/plain' }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Backup No Ponto' });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+      }
+    }
+    const url = URL.createObjectURL(new Blob([payload], { type: 'text/plain' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setToast('Backup salvo em Downloads');
+  }
+
+  function importAllData(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed = null;
+      try { parsed = JSON.parse(String(reader.result || '')); } catch (err) {}
+      if (!parsed || parsed.app !== 'noponto' || !parsed.data || typeof parsed.data !== 'object') {
+        setToast('Esse arquivo não é um backup do No Ponto');
+        return;
+      }
+      const d = new Date(parsed.exportedAt);
+      const when = isNaN(d) ? '' : ` de ${d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
+      if (!window.confirm(`Isso vai trocar os dados deste celular pelos do backup${when}. Continuar?`)) return;
+      for (const k of appStorageKeys()) localStorage.removeItem(k);
+      for (const [k, v] of Object.entries(parsed.data)) {
+        if (typeof v === 'string') localStorage.setItem(STORAGE_PREFIX + k, v);
+      }
+      try { sessionStorage.setItem('noponto-imported', '1'); } catch (err) {}
+      window.location.reload();
+    };
+    reader.onerror = () => setToast('Não consegui ler o arquivo');
+    reader.readAsText(file);
   }
 
   function saveSettingsForm() {
@@ -3123,6 +3194,34 @@ function App() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div style={cardStyle()}>
+                <div style={{ ...SECTION_TITLE, marginBottom: 6 }}>Backup dos dados</div>
+                <div style={{ fontSize: 14.5, lineHeight: 1.5, color: PALETTE.textMuted, marginBottom: 12 }}>
+                  Para passar seus registros para outro celular: toque em Exportar, mande o arquivo para você no WhatsApp e, no outro celular, toque em Importar.
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={exportAllData}
+                    style={{ flex: 1, minHeight: 44, borderRadius: 12, border: 'none', background: PALETTE.honey, color: '#1B1815', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}
+                  >
+                    Exportar dados
+                  </button>
+                  <label
+                    style={{ flex: 1, minHeight: 44, borderRadius: 12, border: `1px solid ${PALETTE.border}`, color: PALETTE.text, fontWeight: 700, fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}
+                  >
+                    Importar dados
+                    <input
+                      type="file"
+                      accept=".txt,.json,text/plain,application/json"
+                      onChange={importAllData}
+                      aria-label="Escolher arquivo de backup"
+                      style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' }}
+                    />
+                  </label>
+                </div>
               </div>
 
               <button
